@@ -1,22 +1,29 @@
 export let es = {
     phraseFinder(hours, minutes){
-        let hoursW = this.numberFinder(hours);
+        
+        let returnArray = [];
         if(minutes === 0){
             return es.phrases[0](hours);
-        }else if(minutes < 40){
-            let minutesW = es.numberFinder(minutes);
+        }
+        let hoursW = this.numberFinder(hours);
+        let minutesW = es.numberFinder(minutes);
+        returnArray = es.phrases[1](hoursW, minutesW);
+        if(minutes < 40){
             if(minutes === 15){
-                return [es.phrases[1](hoursW, "cuarto"),es.phrases[1](hoursW, minutesW)]
+                returnArray.push([es.phrases[1](hoursW, "cuarto")]);
             }else if(minutes === 30){
-                return [es.phrases[1](hoursW, "media"),es.phrases[1](hoursW, minutesW)]
-            }else {
-                return es.phrases[1](hoursW,minutesW)
+                returnArray.push([es.phrases[1](hoursW, "media")]);
             }
         }else if(minutes >= 40){
-            var restMinutes = 60-minutes;
+            let restMinutes = 60-minutes;
+            let minutesW = es.numberFinder(minutes)
             let restMinutesW = es.numberFinder(restMinutes);
-            return [es.phrases[1](hoursW, restMinutesW),es.phrases[40](hoursW, restMinutesW)];
+            if(minutes === 45){
+                returnArray.push(es.phrases[40](hoursW, "cuarto"));
+            }
+            returnArray.push([es.phrases[40](hoursW, restMinutesW)]);
         }
+        return returnArray;
     },
     phrases : {
         0 : (hours)=>{
@@ -50,8 +57,7 @@ export let es = {
                 return es.numbers[0][number[0]];
             }
         }else{
-            if(number[1]=== 0){
-                console.log(number[0])
+            if(number[1]=== "0"){
                 return es.numbers[number[0]][0];
             }else{
                 return es.numbers[ number[0] ][1]( es.numbers[0][number[1]] );
