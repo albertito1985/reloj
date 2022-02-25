@@ -1,8 +1,7 @@
 import {Component} from 'react';
 import './App.css';
 import {CgArrowsHAlt} from 'react-icons/cg';
-import './controll/useful';//probar
-import {es} from './modell/writtenComponents/written';
+import './controll/useful';
 
 class App extends Component {
   constructor(){
@@ -24,17 +23,10 @@ class App extends Component {
     return (
       <div className="App">
        <Reloj hours={this.state.hours} minutes={this.state.minutes} changeTime={this.changeTime}/>
-       <Escrito hours={this.state.hours} minutes={this.state.minutes}/>
       </div>
     );
   }
-}
-
-class Escrito extends Component{
-render(){
-  let text = es.phraseFinder(this.props.hours, this.props.minutes);
-  return(<div>{text}</div>)
-}
+ 
 }
 
 class Reloj extends Component{
@@ -53,7 +45,6 @@ class Reloj extends Component{
     this.handle.eventHandlers.mouseMove = this.handle.eventHandlers.mouseMove.bind(this);
     this.handle.minutero.move = this.handle.minutero.move.bind(this);
     this.handle.minutero.hourDegrees = this.handle.minutero.hourDegrees.bind(this);
-    this.handle.horario.move = this.handle.horario.move.bind(this);
     this.handle.senseRotation =this.handle.senseRotation.bind(this);
     let deadCenter;
   }
@@ -86,38 +77,25 @@ class Reloj extends Component{
   //bind this variable
   handle = {
     that: this,
-    both : {
-      moveView(hourDegrees,minuteDegrees){
-        let minutero = document.getElementById("minutero");
-        let horario = document.getElementById("horario");
-        minutero.style.setProperty('--rotation', minuteDegrees);
-        horario.style.setProperty('--rotation', hourDegrees);
-      }
-    },
+    // move(degrees){
+    //   let handle = document.getElementById(this.that.state.handle);
+    //   handle.style.setProperty('--rotation', degrees);
+    // },
     senseRotation(nextPosition,handle){
       let returnObject= {};
-      let criticalPoints;
-      if(handle === "minutero"){
-        criticalPoints = 1;
-      }else if(handle === "horario"){
-        criticalPoints = 12;
-      }
-      let threshold = 360/criticalPoints;
-      let nextPositionSimplified= nextPosition % threshold;
-      let handleStateSimplified= this.state[handle] % threshold;
-      
-      if(handleStateSimplified < 10 && (nextPositionSimplified <= (threshold-1) && nextPositionSimplified > threshold-10)){
+      let handleState = this.state[handle];
+
+      if((handleState >= 0 && handleState < 10) && (nextPosition > 350 && nextPosition <= 359)) {
         returnObject = {
           direction:"ccw",
           newTurn:true
         }
-      }else if(nextPositionSimplified < 10 && (handleStateSimplified > (threshold-10) && handleStateSimplified <= (threshold-1))){
+      }else if ((nextPosition >= 0 && nextPosition < 10) && (handleState > 350 && handleState <= 359)){
         returnObject = {
           direction:"cw",
           newTurn:true
         }
-      }
-      else {
+      }else {
         returnObject = {
           direction: "not critic"
         }
@@ -130,11 +108,15 @@ class Reloj extends Component{
     },
     minutero:{
       move(minuteDegrees){
+        
+        let minutero = document.getElementById("minutero");
+        let horario = document.getElementById("horario");
         let hours = this.props.hours;
         
         let rotation = this.handle.senseRotation(minuteDegrees,"minutero");
         
         if(rotation.newTurn === true){
+          console.log(rotation);
           if(rotation.direction === "cw" ){
             hours = (this.props.hours+1 === 13)? 1:this.props.hours+1;
           }else if(rotation.direction === "ccw"){
@@ -145,9 +127,8 @@ class Reloj extends Component{
         let minutes = this.pointingNumber(minuteDegrees,6);
         let hourDegrees = this.handle.minutero.hourDegrees(hours, minutes);
         
-
-
-        this.handle.both.moveView(hourDegrees,minuteDegrees-(minuteDegrees % 6));
+        minutero.style.setProperty('--rotation', minuteDegrees);
+        horario.style.setProperty('--rotation', hourDegrees);
         this.props.changeTime(hours,minutes);
       },
       hourDegrees(hours, minutes){
@@ -156,27 +137,11 @@ class Reloj extends Component{
     },
     horario:{
       move(hourDegrees){
+        let minutero = document.getElementById("minutero");
+        let horario = document.getElementById("horario");
         let minutes = this.props.minutes;
-        
+
         let rotation = this.handle.senseRotation(hourDegrees,"horario");
-
-        if(rotation.newTurn === true){
-          if(rotation.direction === "cw" ){
-            minutes = 0;
-          }else if(rotation.direction === "ccw"){
-            minutes = 59;
-          }
-        }
-
-        let hours = this.pointingNumber(hourDegrees,30) || 12;
-        let minuteDegrees = this.handle.horario.minuteDegrees(hourDegrees);
-       
-        this.handle.both.moveView(hourDegrees,minuteDegrees);
-        this.props.changeTime(hours,minutes);
-
-      },
-      minuteDegrees(hourDegrees){
-        return ((360*(hourDegrees % 30))/30);
       }
     },
     eventHandlers:{
@@ -188,6 +153,12 @@ class Reloj extends Component{
             this.handle.minutero.move(degrees);
           }else{
             this.handle.horario.move(degrees);
+
+            //saknas tror jag
+
+
+            let hour = this.pointingNumber(degrees,30);
+            this.props.changeTime(hour,this.props.minutes)
           }
           
         }
