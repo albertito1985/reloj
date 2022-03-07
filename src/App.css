@@ -1,3 +1,9 @@
+/* relojes total height 300px width:240 */
+/* texto width 400 
+total 400+240+20 = 660*/
+
+
+
 * {
   padding:0;
   margin:0;
@@ -11,15 +17,59 @@
                                   supported by Chrome, Edge, Opera and Firefox */
 }
 
-.reloj {
-  width:300px;
+@font-face{
+  font-family: "digital";
+  src: url("./fonts/7SEGMENTALDIGITALDISPLAY.ttf");
+}
+
+.App{
+  display: flex;
+  height:100vh;
+  min-height:490px;
+  width:100%;
+  justify-content: center;
+  align-items:flex-end;
+  padding:20px;
+}
+.container{
+  position:relative;
+  display:flex;
+  gap:20px;
+}
+
+.disco{
+  --rotate:0;
+  position:absolute;
   height:300px;
+  width:300px;
+  background-image:url("./images/disco.svg");
+  background-size:cover;
+  right:200px; 
+  transform:translate(50%, -50%);
+  z-index:-1;
+  
+}
+.relojes {
+  display:flex;
+  flex-direction:column;
+  justify-content: center;
+  align-items:center;
+  gap:20px;
+  background-color:black;
+  padding:20px;
+  border-radius:50px;
+}
+
+.reloj {
+  width:200px;
+  height:200px;
   border-radius:50%;
   border: 1px solid black;
   position:relative;
   display:flex;
   font-size:20px;
 }
+
 .reloj .numeros{
   position:absolute;
   width: 100%;
@@ -27,7 +77,18 @@
   display:flex;
   justify-content: center;
   align-items:center;
+  background-color:white;
+  border-radius:50px;
 }
+
+.reloj .background{
+  --dimension: 75%;
+  position:absolute;
+  height:var(--dimension);
+  width:var(--dimension);
+  background-image:url("./images/background.svg")
+}
+
 
 .reloj .horasContainer{
   --dimension: 100%;
@@ -37,7 +98,7 @@
 }
 
 .reloj .minutosContainer{
-  --dimension:100%;
+  --dimension:70%;
   position:absolute;
   width: var(--dimension);
   height: var(--dimension);
@@ -51,6 +112,10 @@
   height:100%;
   text-align:center;
   transform:rotate(var(--rotation));
+}
+
+.reloj .minutos p{
+  font-size:0.6em;
 }
 
 .reloj .horas {
@@ -73,6 +138,11 @@
 .reloj .numero9 {--rotation:270deg;}
 .reloj .numero10 {--rotation:300deg;}
 .reloj .numero11 {--rotation:330deg;}
+
+.numero{
+  transform:rotate(calc(var(--rotation)*(-1)));
+}
+
 
 .reloj .manillaContainer {
   --rotation:0;
@@ -117,6 +187,7 @@
   width:10px;
 }
 
+
 .manillaContainer .agarrador{
   position:relative;
   width:100%;
@@ -130,7 +201,7 @@
   display:flex;
 }
 
-.reloj .digital{
+.reloj .logo{
   position:absolute;
   background-color:black;
   z-index:20;
@@ -140,16 +211,66 @@
   left:50%;
   transform:translate(-50%, -50%);
   border-radius:50%;
-  color:green;
-  display:flex;
-  justify-content:center;
-  align-items:center;
+  background-image:url("./images/ES.svg");
+  background-position:center;
+  border:1px solid black;
 }
 
-.digital .hours{
+.relojDigital{
+  width:50%;
+  color:#E97F02;
+  border:1px solid white;
+  border-radius:50px;
+  height:40px;
+  text-align:center;
+  display:flex;
+  justify-content: center;
+  align-items:center;
+  gap:3px;
+  font-family: "digital";
   font-size:2em;
 }
 
-.digital .minutes{
-  font-size:1em;
+.texto{
+  width:400px;
+  height:300px;
+  border:1px solid black;
+  display:flex;
+  flex-direction:column;
+  justify-content: center;
+  align-items: center;
+  background-color:white;
+  border-radius:50px;
+}
+.pregunta{
+  height:40%;
+  width:100%;
+  display:flex;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.escrito{
+  height:60%;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content: center;
+  align-items: center;
+  gap:40px;
+}
+
+.phrasePart{
+  border: 1px solid black;
+  padding:10px;
+  border-radius:50px;
+}
+
+.phrase1{
+  background-color:#F8CA00
+}
+
+.phrase2{
+  background-color: #E97F02;
 }

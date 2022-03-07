@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 22.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.0" id="disco" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 300 300" style="enable-background:new 0 0 300 300;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:url(#SVGID_1_);}
+	.st1{opacity:0.5;fill:#FFFFFF;}
+	.st2{fill:#FFFFFF;}
+	.st3{fill:url(#SVGID_2_);}
+	.st4{fill:url(#SVGID_3_);}
+</style>
+<g>
+	<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="150.0304" y1="299.5403" x2="150.0304" y2="-0.4597">
+		<stop  offset="0" style="stop-color:#CCE0F4"/>
+		<stop  offset="3.061777e-02" style="stop-color:#C3DCF2"/>
+		<stop  offset="8.156573e-02" style="stop-color:#A9D2EE"/>
+		<stop  offset="0.1465" style="stop-color:#80C2E7"/>
+		<stop  offset="0.2222" style="stop-color:#47ACDE"/>
+		<stop  offset="0.2712" style="stop-color:#1E9CD7"/>
+		<stop  offset="0.4957" style="stop-color:#0075BE"/>
+		<stop  offset="0.9944" style="stop-color:#00007B"/>
+	</linearGradient>
+	<circle class="st0" cx="150" cy="149.5" r="150"/>
+</g>
+<g id="estrellas">
+	<circle class="st1" cx="59.7" cy="91.5" r="0.5"/>
+	<circle class="st1" cx="113.7" cy="91" r="0.5"/>
+	<circle class="st1" cx="99" cy="76.2" r="0.5"/>
+	<circle class="st1" cx="79.1" cy="73.2" r="0.5"/>
+	<circle class="st1" cx="35.8" cy="73.7" r="0.5"/>
+	<circle class="st1" cx="33.2" cy="90.5" r="0.5"/>
+	<circle class="st1" cx="56.7" cy="66.1" r="0.5"/>
+	<circle class="st1" cx="94.4" cy="65.5" r="0.5"/>
+	<circle class="st1" cx="117.8" cy="73.7" r="0.5"/>
+	<circle class="st1" cx="48.5" cy="81.3" r="0.5"/>
+	<circle class="st1" cx="152.7" cy="92.5" r="0.5"/>
+	<circle class="st1" cx="206.7" cy="92" r="0.5"/>
+	<circle class="st1" cx="192" cy="77.2" r="0.5"/>
+	<circle class="st1" cx="172.1" cy="74.2" r="0.5"/>
+	<circle class="st1" cx="128.8" cy="74.7" r="0.5"/>
+	<circle class="st1" cx="126.2" cy="91.5" r="0.5"/>
+	<circle class="st1" cx="149.7" cy="67.1" r="0.5"/>
+	<circle class="st1" cx="187.4" cy="66.5" r="0.5"/>
+	<circle class="st1" cx="210.8" cy="74.7" r="0.5"/>
+	<circle class="st1" cx="141.5" cy="82.3" r="0.5"/>
+	<circle class="st1" cx="70.7" cy="63.5" r="0.5"/>
+	<circle class="st1" cx="124.7" cy="63" r="0.5"/>
+	<circle class="st1" cx="110" cy="48.2" r="0.5"/>
+	<circle class="st1" cx="90.1" cy="45.2" r="0.5"/>
+	<circle class="st1" cx="46.8" cy="45.7" r="0.5"/>
+	<circle class="st1" cx="44.2" cy="62.5" r="0.5"/>
+	<circle class="st1" cx="67.7" cy="38.1" r="0.5"/>
+	<circle class="st1" cx="105.4" cy="37.5" r="0.5"/>
+	<circle class="st1" cx="128.8" cy="45.7" r="0.5"/>
+	<circle class="st1" cx="59.5" cy="53.3" r="0.5"/>
+	<circle class="st1" cx="172.7" cy="52.5" r="0.5"/>
+	<circle class="st1" cx="226.7" cy="52" r="0.5"/>
+	<circle class="st1" cx="212" cy="37.2" r="0.5"/>
+	<circle class="st1" cx="192.1" cy="34.2" r="0.5"/>
+	<circle class="st1" cx="148.8" cy="34.7" r="0.5"/>
+	<circle class="st1" cx="146.2" cy="51.5" r="0.5"/>
+	<circle class="st1" cx="169.7" cy="27.1" r="0.5"/>
+	<circle class="st1" cx="207.4" cy="26.5" r="0.5"/>
+	<circle class="st1" cx="230.8" cy="34.7" r="0.5"/>
+	<circle class="st1" cx="161.5" cy="42.3" r="0.5"/>
+	<circle class="st1" cx="214.7" cy="89.5" r="0.5"/>
+	<circle class="st1" cx="268.7" cy="89" r="0.5"/>
+	<circle class="st1" cx="254" cy="74.2" r="0.5"/>
+	<circle class="st1" cx="234.1" cy="71.2" r="0.5"/>
+	<circle class="st1" cx="190.8" cy="71.7" r="0.5"/>
+	<circle class="st1" cx="188.2" cy="88.5" r="0.5"/>
+	<circle class="st1" cx="211.7" cy="64.1" r="0.5"/>
+	<circle class="st1" cx="249.4" cy="63.5" r="0.5"/>
+	<circle class="st1" cx="272.8" cy="71.7" r="0.5"/>
+	<circle class="st1" cx="203.5" cy="79.3" r="0.5"/>
+</g>
+<path id="luna" class="st2" d="M159.5,57c-12.7,0-23-10.3-23-23c0-11.2,7.9-20.5,18.5-22.6c-1.6-0.3-3.3-0.4-5-0.4
+	c-15.7,0-28.5,12.8-28.5,28.5S134.3,68,150,68c12.4,0,22.9-7.9,26.8-18.9C172.7,54,166.4,57,159.5,57z"/>
+<g id="sol">
+	<radialGradient id="SVGID_2_" cx="149.5304" cy="248.0403" r="41" gradientUnits="userSpaceOnUse">
+		<stop  offset="0" style="stop-color:#FF931E"/>
+		<stop  offset="0.3055" style="stop-color:#FF9420;stop-opacity:0.6945"/>
+		<stop  offset="0.4475" style="stop-color:#FF9828;stop-opacity:0.5525"/>
+		<stop  offset="0.5558" style="stop-color:#FF9E34;stop-opacity:0.4442"/>
+		<stop  offset="0.6469" style="stop-color:#FFA747;stop-opacity:0.3531"/>
+		<stop  offset="0.7273" style="stop-color:#FFB25E;stop-opacity:0.2727"/>
+		<stop  offset="0.8" style="stop-color:#FFC07C;stop-opacity:0.2"/>
+		<stop  offset="0.8672" style="stop-color:#FFD19F;stop-opacity:0.1328"/>
+		<stop  offset="0.9298" style="stop-color:#FFE4C7;stop-opacity:7.016480e-02"/>
+		<stop  offset="0.9867" style="stop-color:#FFF9F3;stop-opacity:1.332510e-02"/>
+		<stop  offset="1" style="stop-color:#FFFFFF;stop-opacity:0"/>
+	</radialGradient>
+	<circle class="st3" cx="149.5" cy="248" r="41"/>
+	<radialGradient id="SVGID_3_" cx="149.5304" cy="248.0403" r="20" gradientUnits="userSpaceOnUse">
+		<stop  offset="0" style="stop-color:#F8CA00"/>
+		<stop  offset="0.2678" style="stop-color:#F7C700"/>
+		<stop  offset="0.485" style="stop-color:#F5BD00"/>
+		<stop  offset="0.6844" style="stop-color:#F2AC01"/>
+		<stop  offset="0.8722" style="stop-color:#ED9401"/>
+		<stop  offset="1" style="stop-color:#E97F02"/>
+	</radialGradient>
+	<circle class="st4" cx="149.5" cy="248" r="20"/>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+<g>
+</g>
+</svg>
