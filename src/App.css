@@ -45,7 +45,7 @@ total 400+240+20 = 660*/
   background-image:url("./images/disco.svg");
   background-size:cover;
   right:200px; 
-  transform:translate(50%, -50%);
+  transform:translate(50%, -50%) rotate(var(--rotate));
   z-index:-1;
   
 }
@@ -217,18 +217,17 @@ total 400+240+20 = 660*/
 }
 
 .relojDigital{
-  width:50%;
+  padding: 5px 20px;
   color:#E97F02;
   border:1px solid white;
   border-radius:50px;
-  height:40px;
   text-align:center;
   display:flex;
   justify-content: center;
   align-items:center;
   gap:3px;
   font-family: "digital";
-  font-size:2em;
+  font-size:30px;
 }
 
 .texto{

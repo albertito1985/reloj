@@ -14,14 +14,14 @@ export let reloj = {
         return this.states.period;
       }
     },
-    change(e,handle,clockCenter){
+    change(e,handle,clockCenter,clockWork){
         let degrees = this.calculateDegrees(e,clockCenter)
         if(handle === "minutero"){
             this.moving = "minutero";
-            return this.handle.minutero.move(degrees);
+            return this.handle.minutero.move(degrees,clockWork);
         }else{
             this.moving = "horario";
-            return this.handle.horario.move(degrees);
+            return this.handle.horario.move(degrees,clockWork);
         }
     },
     calculateDegrees(e,clockCenter){
