@@ -1,46 +1,45 @@
 export let es = {
     phraseFinder(hours, minutes, mode){
-        let phraseNumber = undefined;
-        if(hours === 12 && minutes === 0){
-            return [<p key={"mediodia"}><span className="phrasePart phrase0">Es mediodía.</span></p>];
-        }else if(hours === 0 && minutes === 0){
-            return [<p key={"medianoche"}><span className="phrasePart phrase0">Es medianoche.</span></p>];
-        }else{
-            if(mode === 2){
-                return es.generatePhrases(hours,minutes,0,mode);
-            }else{
-                phraseNumber = es.choosePhrase(minutes);
-                return es.generatePhrases(hours,minutes,phraseNumber,mode); 
-            }
-        }
+        let phraseNumber = es.choosePhrase(minutes,mode);
+        return es.generatePhrases(hours,minutes,phraseNumber,mode); 
     },
-
     generatePhrases(hours,minutes,phraseNumber,mode){
             let returnArray = [];
-            phraseNumber.forEach((phrase,phraseIndex)=>{
+            phraseNumber.forEach((phrase)=>{
                 returnArray = returnArray.concat(es.phrases[phrase](hours,minutes,mode));
             });
         return returnArray;
     },
-    choosePhrase:(minutes)=>{
+    choosePhrase:(minutes,mode)=>{
         if(minutes === 0){
             return [0];
-        }else if(minutes<35){
-            return [1];
-        }else if(minutes >=35 && minutes <= 40){
-            return [1,2];
-        }else{
-            return [2];
+        }else {
+            if(mode === 2 ){
+                return [1];
+            }else if(minutes<35){
+                return [1];
+            }else if(minutes >=35 && minutes <= 40){
+                return [1,2];
+            }else{
+                return [2];
+            }
         }
     },
     phrases : [
         (hours,minutes,mode)=>{
             //solo en punto
+            if(mode !== 2 ){
+                if(hours === 12 && minutes === 0){
+                    return [{type:0,phrase: "Es mediodía."}]
+                }else if(hours === 0 && minutes === 0){
+                    return [{type:0,phrase: "Es medianoche."}]
+                }
+            }
             let endings = es.endings(hours,mode);
             hours = es.modeAdaptation(hours,mode);
             let hoursW = es.numberFinder(hours);
             let returnArray = endings.map((ending,index)=>{
-                return <p key={`0mode${mode}${index}`}><span className="phrasePart phrase0">{(hoursW === "uno")? `Es la una en punto`: `Son las ${hoursW} en punto`}{ending}</span></p>;
+                return {type:0,phrase: (hoursW === "uno")? `Es la una en punto ${ending}`: `Son las ${hoursW} en punto${ending}`};
             });
             return returnArray;
             
@@ -49,11 +48,11 @@ export let es = {
             //1< min <39
             let endings = es.endings(hours,mode);
             hours = es.modeAdaptation(hours,mode);
-            let hoursW = es.hourExceptions(es.numberFinder(hours));
+            let hoursW = es.hourExceptions(es.numberFinder(hours),mode);
             let minutesW = es.minuteExceptions(es.numberFinder(minutes));
             
             let returnArray = endings.map((ending,index)=>{
-                return <p key={`1mode${mode}${index}`}><span className="phrasePart phrase1">{(hoursW === "uno")?`Es la una y ${minutesW}`: `Son las ${hoursW} y ${minutesW}`}{ending}</span></p>;
+                return{type:1,phrase:(hoursW === "uno")?`Es la una y ${minutesW} ${ending}`: `Son las ${hoursW} y ${minutesW}${ending}`};
             });
             return returnArray;
         },
@@ -62,23 +61,23 @@ export let es = {
             minutes = 60-minutes;
             let endings = es.endings(hours+1,mode);
             hours = es.modeAdaptation(hours+1,mode);
-            // hours =(hours+1 === 25)?1:hours+1;
             let hoursW = es.hourExceptions(es.numberFinder(hours));
             let minutesW = es.minuteExceptions(es.numberFinder(minutes));
             
             let returnArray = endings.map((ending,index)=>{
-                // console.log(ending.props["data-period"]);
                 if(mode === 0){
-                    return <p key={`2mode${mode}${index}`}><span className="phrasePart phrase2">{`Son ${minutesW} para `}{(hoursW === "uno")?"la una":`las ${hoursW}`}{ending}</span></p>;
+                    return {type:2,phrase:(hoursW === "uno")?`Son ${minutesW} para la una ${ending}`:`Son ${minutesW} para las ${hoursW}${ending}`}
                 }else{
-                    return <p key={`2mode${mode}${index}`}><span className="phrasePart phrase2">{(hoursW === "uno")?`Son la una menos ${minutesW}`: `Son las ${hoursW} menos ${minutesW}`}{ending}</span></p>;
+                    return {type:2,phrase:(hoursW === "uno")?`Son la una menos ${minutesW} ${ending}`: `Son las ${hoursW} menos ${minutesW}${ending}`}
                 }
             });
             return returnArray;
         }
     ],
     modeAdaptation(hours,mode){
-        if(mode !==2){
+        if(mode ===2){
+            
+        }else{
             if(hours>12){
                 hours -=12
             }
@@ -88,12 +87,12 @@ export let es = {
     endings:(hours,mode)=>{
         if(mode === 3){
             if(hours<13){
-                return ["AM"];
+                return [" AM."];
             }else{
-                return ["PM"];
+                return [" PM."];
             }
         }else if(mode === 2){
-            return null;
+            return ["."];
         }else{
             if (hours === 0){
                 return  [" de la noche."]
@@ -119,8 +118,10 @@ export let es = {
             return number;
         }
     },
-    hourExceptions(number){
-        if(number === "veinticuatro" || number === "cero"){
+    hourExceptions(number,mode){
+        if(number === "cero" && mode === 2){
+
+        }else if(number === "veinticuatro" || number === "cero"){
             return "doce";
         }
         return number;
@@ -129,7 +130,7 @@ export let es = {
         number = `${number}`;
         if(number<20){
             if(number.length === 2){
-                return es.numbers[number[0]][number[1]] //falla aquí
+                return es.numbers[number[0]][number[1]];
             }else{
                 return es.numbers[0][number[0]];
             }

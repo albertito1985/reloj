@@ -1,7 +1,8 @@
 import {Component} from 'react';
 import {es} from '../modell/writtenComponents/written';
-import { reloj } from '../controller/controller';
+import { reloj, relojDigital, escrito, translate } from '../controller/controller';
 import {CgArrowsHAlt} from 'react-icons/cg';
+import '../controller/useful';//probar
 
 class Disco extends Component {
     calculateDegrees(){
@@ -16,47 +17,197 @@ class Disco extends Component {
   }
   
 class Escrito extends Component{
-render(){
+  constructor(){
+    super();
+    this.state = {
+      hours:undefined,
+      minutes:undefined,
+      feedback:[],
+      input:""
+    }
+    this.handleChange = this.handleChange.bind(this);
+  }
+  static getDerivedStateFromProps(props,state){
+    if(props.answer){
+      return null
+    }else{
+      return{
+        hours:props.hours,
+        minutes:props.minutes
+      }
+    }
+  }
+  componentDidMount(){
+    console.log(escrito.analyzePhrase("son las veinte para las cinco de la noche."));
+  }
+
+  write(hours,minutes){
     let text = es.phraseFinder(this.props.hours, this.props.minutes, this.props.mode);
-    return(<div className="escrito" >{text}</div>)
-}
+      let content =  text.map((phrase,index)=>{
+        return <p key={`${phrase.type}${index}`}><span className={`phrasePart phrase${phrase.type}`}>{phrase.phrase}</span></p>
+      })
+      return content;
+  }
+
+  handleChange(e){
+    this.setState({input:e.value});
+    escrito.input = e.value;
+    if(e.value.length>10){
+      escrito.analyzePhrase(e.value)
+    }
+  }
+  
+  render(){
+      
+      return (<div className="escritoContainer">
+        <div className="escrito show" >{this.write(this.state.hours, this.state.minutes)}</div>
+        <span className="escritoSpan">
+          {/* <input className="escritoInteraction" value={escrito.input} onChange={this.handleChange}></input> */}
+          <span className="escritoFeedback"></span>
+        </span>
+      </div>);
+  }
 }
   
 class RelojDigital extends Component{
-showTime(){
-    
-    let hours = this.props.hours;
-    let returnArray=[]
-    if(this.props.mode === 12){
-        if(hours >= 12){
-            hours = (hours - 12 === 0)? 12: hours - 12;
-            returnArray.push(<span key="PM">-PM</span>);
-        }else if(hours === 0 ){
-            hours = 12;
-            if(this.props.minutes===0){
-                returnArray.push(<span key="PM">-PM</span>);
-            }else{
-                returnArray.push(<span key="AM">-AM</span>);
-            }
-            
-        }else{
-            returnArray.push(<span key="AM">-AM</span>);
-        }
+  constructor(){
+    super();
+    this.state={
+      hours:undefined,
+      minutes:undefined,
+      period:undefined
     }
-    returnArray.unshift(<div className="hours" key="Hours">{(hours<10)?`0${hours}`: hours}</div>,
-        <span key=":">:</span>,
-        <div className="minutes" key="Minutes">{(this.props.minutes<10)? `0${this.props.minutes}`: this.props.minutes}</div>);
-    return returnArray;
-} 
+    this.handleChange = this.handleChange.bind(this);
+    this.showInteraction = this.showInteraction.bind(this);
+  };
 
-render(){
-    if(this.props.mode === null){
-        return null;
+static getDerivedStateFromProps(props,state){
+  let timeObject ={};
+  if(props.answer){
+    if(props.mode === 12){
+      timeObject = translate.time24hto12h({hours:relojDigital.hours,minutes:relojDigital.minutes});
+      
+    }else{
+      timeObject = {
+        hours:relojDigital.hours,
+        minutes:relojDigital.minutes
+      }
+    }
+    return {...timeObject};
+  }else{
+    if(props.mode === 12){
+      timeObject = translate.time24hto12h({hours:props.hours,minutes:props.minutes});
+    }else{
+      timeObject = {
+        hours:props.hours,
+        minutes:props.minutes
+      }
     };
-    return(<div className="relojDigital">
-        {this.showTime()}
-    </div>)
+    return {...timeObject}
+  }
 }
+
+response(timeObject){
+  if(this.props.answer){
+    relojDigital.hours = timeObject.hours;
+    relojDigital.minutes = timeObject.minutes;
+    this.setState(timeObject);
+  }else{
+    this.props.response(timeObject);
+    this.setState(timeObject);
+  }
+}
+
+handleChange(e){
+  if(e.target.id === "period"){
+    this.response(relojDigital.togglePeriodIn24h(this.state));
+  }else if(e.target.id === "hours"){
+    let filteredSiffra;
+    if(this.props.mode === 12){
+        filteredSiffra = filterminmaxvalue(e.target.value,1,12);
+    }else{
+        filteredSiffra = filterminmaxvalue(e.target.value,0,23);
+    }
+    if(!(filteredSiffra=== undefined)){
+      this.response({hours:filteredSiffra,minutes:this.state.minutes})
+    }
+  }else if(e.target.id === "minutes"){
+    let filteredSiffra;
+    filteredSiffra = filterminmaxvalue(e.target.value,0,59);
+    if(!(filteredSiffra=== undefined)){
+      this.response({hours:this.state.hours,minutes:filteredSiffra})
+    }
+  }
+  function filterminmaxvalue(value,min,max){
+    let filteredSiffra = /\d*?(\d?(\d))$/.exec(value);
+    if(filteredSiffra !== null ){
+      if(filteredSiffra[1]<=max && filteredSiffra[1]>min){
+        return parseInt(filteredSiffra[1]);
+      }else if(filteredSiffra[2]>=min){
+        return parseInt(filteredSiffra[2]);
+      }
+    }
+  }
+}
+
+showInteraction(e){
+  if(this.props.interaction){
+    if(e.target.classList.contains("clockContainers")){
+      let span = e.target.getElementsByClassName("digitalSpan")[0];
+      let show = e.target.getElementsByClassName("digitalShow")[0];
+      span.classList.add("show");
+      show.classList.remove("show");
+      let interaction = span.getElementsByClassName("digitalInteraction")[0];
+      interaction.focus();
+    }
+  }
+}
+
+hideInteraction(e){
+  if(e.target.classList.contains("digitalInteraction")){
+    let span = e.target.parentElement;
+    let show = span.previousSibling;
+    span.classList.remove("show");
+    show.classList.add("show");
+  }
+}
+
+showTime(){
+  let timeToShow={
+    hours: (this.state.hours<10)?`0${this.state.hours}`: this.state.hours,
+    minutes:(this.state.minutes<10)?`0${this.state.minutes}`: this.state.minutes,
+  }
+  let returnArray=[]
+  if(this.props.mode === 12){
+    returnArray.push(<span key="-">-</span>,
+    <div className="clockContainers" tabIndex="3" onFocus={this.showInteraction} id="hoursContainer" key="period">
+      <div className="digitalShow show period" >{this.state.period}</div>
+      <span className="digitalSpan period" >
+        <select className="digitalInteraction" id="period" onChange={this.handleChange} value={this.state.period} onBlur={this.hideInteraction}>
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+      </span>
+    </div>);
+  }
+
+  returnArray.unshift(<div className="clockContainers" tabIndex="1" onFocus={this.showInteraction} id="hoursContainer" key="Hours">
+      <div className="digitalShow show hours" >{timeToShow.hours}</div>
+      <span className="digitalSpan hours" key="spanHours"><input  className="digitalInteraction" onBlur={this.hideInteraction} type="text" id="hours" value={timeToShow.hours} onChange={this.handleChange}></input></span>  
+    </div>,
+    <span key=":">:</span>,
+    <div className="clockContainers" tabIndex="2" onFocus={this.showInteraction} id="minutesContainer" key="minutes">
+      <div className="digitalShow show minutes">{timeToShow.minutes}</div>
+      <span className="digitalSpan minutes" key="spanMinutes"><input className="digitalInteraction" onBlur={this.hideInteraction} type="text" id="minutes" value={timeToShow.minutes} onChange={this.handleChange}></input></span>
+    </div>);
+  return returnArray;
+}
+
+  render(){
+    return(<div className="relojDigital">
+        {this.showTime(this.props.interaction)}
+    </div>)
+  }
 }
   
   class RelojAnalogo extends Component{
@@ -66,30 +217,51 @@ render(){
         moving: false,
         handle: undefined,
         clockWork:{
-          time:{
-            hours: undefined,
-            minutes:undefined
-          },
           degrees:{
-            hours:undefined,
-            minutes:undefined
+            hours:0,
+            minutes:0
           }  
         }
       };
       this.handle.eventHandlers.mouseUp =this.handle.eventHandlers.mouseUp.bind(this);
       this.handle.eventHandlers.mouseDown =this.handle.eventHandlers.mouseDown.bind(this);
       this.handle.eventHandlers.mouseMove = this.handle.eventHandlers.mouseMove.bind(this);
+      this.handle.both.moveView= this.handle.both.moveView.bind(this);
     }
-    
+
+    static getDerivedStateFromProps(props,state){
+        if(props.answer){
+          return {clockWork:{
+            degrees:{
+              hours:reloj.states.hours,
+              minutes:reloj.states.minutes
+            }
+          }}
+        }else{
+          let clockWork = {};
+        clockWork.degrees = reloj.degreesFromNumber(props.hours, props.minutes);
+        reloj.hours = props.hours;
+        reloj.minutes = props.minutes;
+        reloj.period = translate.time24hto12h({hours: props.hours,minutes:props.minutes}).period;
+        reloj.states ={...clockWork.degrees};
+        return {clockWork};
+        }
+        
+    }
+
     componentDidMount(){
-      let reloj = document.getElementById("reloj");
       this.clockCenter = this.calculateClockCenter();
-      let manillaContainers = Array.prototype.slice.call(document.getElementsByClassName("manillaContainer"));
-      manillaContainers.forEach((container)=>{
-        container.addEventListener('mousedown',this.handle.eventHandlers.mouseDown);
-      });
-      reloj.addEventListener('mouseup',this.handle.eventHandlers.mouseUp);
-      reloj.addEventListener('mousemove',this.handle.eventHandlers.mouseMove);
+      if(this.props.interaction === true){
+        let manillaContainers = document.getElementsByClassName("manillaContainer");
+        manillaContainers.forEach((container)=>{
+          container.classList.add("active");
+          container.addEventListener('mousedown',this.handle.eventHandlers.mouseDown);
+        });
+        let reloj = document.getElementById("reloj");
+        reloj.addEventListener('mouseup',this.handle.eventHandlers.mouseUp);
+        reloj.addEventListener('mousemove',this.handle.eventHandlers.mouseMove);
+      }
+      
     }
   
     calculateClockCenter(){
@@ -112,21 +284,22 @@ render(){
     }
   
     handle = {
-      that: this,
       both : {
         moveView(timeObject){
-          let minutero = document.getElementById("minutero");
-          let horario = document.getElementById("horario");
-          minutero.style.setProperty('--rotation', timeObject.degrees.minutes);
-          horario.style.setProperty('--rotation', timeObject.degrees.hours);
+          this.setState({clockWork:{
+            degrees:{
+              hours:timeObject.degrees.hours,
+              minutes: timeObject.degrees.minutes
+            }
+          }})
         },
       },
       eventHandlers:{
         mouseMove:function(e){
           if(this.state.moving === true){
-            let timeObject = reloj.change(e, this.state.handle, this.clockCenter,this.state.clockWork);
+            let timeObject = reloj.change(e, this.state.handle, this.clockCenter);
             this.handle.both.moveView(timeObject);
-            this.props.changeTime({...timeObject.time})
+            this.props.response({...timeObject.time});
           }
         },
         mouseDown(e){
@@ -139,25 +312,26 @@ render(){
           }else if(minutero.contains(e.target)){
             handle = "minutero";
             minutero.style.zIndex = 15;
-          }
-  
+          };
           this.setState({moving:true,
                 handle:handle
               });
         },
         mouseUp(e){
-          let actualHandle = document.getElementById(this.state.handle);
-          actualHandle.style.zIndex = 10; 
-          this.setState({moving:false,
-          handle: "horario"});
+          if(this.state.moving === true){
+            let actualHandle = document.getElementById(this.state.handle);
+            actualHandle.style.zIndex = 10; 
+            this.setState({moving:false,
+            handle: "horario"});
+          }
         }
       }
     }
   
     render(){
       return(<div className="reloj" id="reloj">
-        <div className="manillaContainer minutero" id="minutero"><span className="agarrador" ><CgArrowsHAlt/></span><div className="manilla"></div></div>
-        <div className="manillaContainer horario" id="horario"><span className="agarrador" ><CgArrowsHAlt/></span><div className="manilla"></div></div>
+        <div className="manillaContainer minutero" id="minutero" style={{"--rotation": `${this.state.clockWork.degrees.minutes}`}} ><span className="agarrador" ><CgArrowsHAlt/></span><div className="manilla"></div></div>
+        <div className="manillaContainer horario" id="horario" style={{"--rotation": `${this.state.clockWork.degrees.hours}`}} ><span className="agarrador" ><CgArrowsHAlt/></span><div className="manilla"></div></div>
         <div className="numeros">
         <div className="background">
           </div>
@@ -242,6 +416,5 @@ render(){
       )
     }
   }
-
 
   export {Disco, Escrito, RelojDigital, RelojAnalogo}

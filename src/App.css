@@ -28,20 +28,21 @@ total 400+240+20 = 660*/
   min-height:490px;
   width:100%;
   justify-content: center;
-  align-items:flex-end;
+  align-items:center;
   padding:20px;
 }
 .container{
   position:relative;
   display:flex;
   gap:20px;
+  border:1px solid black;
 }
 
 .disco{
   --rotate:0;
   position:absolute;
-  height:300px;
-  width:300px;
+  height:150px;
+  width:150px;
   background-image:url("./images/disco.svg");
   background-size:cover;
   right:200px; 
@@ -59,7 +60,9 @@ total 400+240+20 = 660*/
   padding:20px;
   border-radius:50px;
 }
-
+/*
+==========================>Reloj Analogo<==========================
+*/
 .reloj {
   width:200px;
   height:200px;
@@ -197,7 +200,7 @@ total 400+240+20 = 660*/
   justify-content: center;
 }
 
-.manillaContainer:hover .agarrador{
+.manillaContainer.active:hover .agarrador{
   display:flex;
 }
 
@@ -216,6 +219,10 @@ total 400+240+20 = 660*/
   border:1px solid black;
 }
 
+/*
+==========================>Reloj Digital<==========================
+*/
+
 .relojDigital{
   padding: 5px 20px;
   color:#E97F02;
@@ -229,6 +236,43 @@ total 400+240+20 = 660*/
   font-family: "digital";
   font-size:30px;
 }
+
+.digitalShow{
+  display:none;
+}
+
+.digitalSpan input,.digitalSpan select{
+  width:28px;
+  text-align: center;
+  background:none;
+  border:none;
+  color:#E97F02;
+  font-family: "digital";
+  font-size:30px;
+}
+
+.digitalSpan select{
+  width:auto;
+
+}
+
+.digitalSpan select option{
+  background-color:black;
+}
+
+.digitalSpan{
+  display:none;
+}
+
+.show{
+  display:flex;
+}
+
+
+
+/*
+==========================>Texto Escrito<==========================
+*/
 
 .texto{
   width:400px;

@@ -11,13 +11,17 @@ class App extends Component {
     this.state = {
       hours: 0,
       minutes: 0,
-      period:"AM",
       config:{
+        analogInteraction: true,
+        analogAnswer:false,
+        digitalInteraction:true,
+        digitalAnswer:false,
         digital:24,
-        writtenType:0,
+        writtenType:2,
+        writtenAnswer:false,
+        writtenInteraction:false
       }
     }
-
     this.changeTime = this.changeTime.bind(this)
   }
   
@@ -25,11 +29,10 @@ class App extends Component {
     //fetch info from URL
   }
 
-  changeTime({hours,minutes,period}){
+  changeTime({hours,minutes}){
     this.setState({
       hours:hours,
       minutes:minutes,
-      period: period
     })
   }
 
@@ -59,12 +62,12 @@ class App extends Component {
         <div className="container">
           <Disco hours={this.state.hours} minutes={this.state.minutes} period={this.state.period}/>
           <div className="relojes">
-            <RelojAnalogo hours={this.state.hours} minutes={this.state.minutes} moving={this.state.moving} changeTime={this.changeTime}/>
-            <RelojDigital hours={this.state.hours} minutes={this.state.minutes} mode={this.state.config.digital}/>
+            <RelojAnalogo hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.analogAnswer} response={this.changeTime} interaction={this.state.config.analogInteraction} feedback={null}/>
+            <RelojDigital hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.digitalAnswer} response={this.changeTime} interaction={this.state.config.digitalInteraction} mode={this.state.config.digital}/>
           </div>
           <div className="texto">
             <p className="pregunta">¿Qué hora és?</p>
-            <Escrito hours={this.state.hours} minutes={this.state.minutes} mode={this.state.config.writtenType}/>
+            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} response={this.changeTime} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType}/>
           </div>
         </div>
       </div>
