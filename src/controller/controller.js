@@ -217,113 +217,143 @@ export let relojDigital = {
 }
 
 export let escrito ={
-  input: undefined,
+  input: "",
+  hours: 0,
+  minutes:0,
   analyzePhrase(phrase){
     phrase= phrase.replace(/\s+/g," ");
     let words = phrase.split(" ");
     let responseObject={feedback:[]};
-    if(words.length === 2 && words[0].match(/[eé][szc]|(?:[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))/i)){//es 
-      if(words[1].match(new RegExp(language.stringToRegEx("mediodía"),"i"))){
-        responseObject.result = {
-          type : 0,
-          minutes:0,
-          hours:12
-        };
-      }else if(words[1].match(new RegExp(language.stringToRegEx("medianoche"),"i"))){
-        responseObject.result = {
-          type : 0,
-          minutes:0,
-          hours:0
-        };
+    
+    if(words.length === 1){
+        return responseObject;
+    }
+    if(words.length === 2 && phrase.match(/.+\.$/)){
+      if(words[0].match(/[eé][szc]$/i)){//es mediodía or es medianoche
+        if(words[1].match(/m[eé]d(?:ll|[iyí])(?:ou|[oóuú])d(?:ll|[iyí])[aá]\.$/i)){
+            responseObject.result = {
+              type : 0,
+              minutes:0,
+              hours:12
+            }
+        }else if(words[1].match(/m[eé]d(?:ll|[iyí])[aá](?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\.$/i)){
+            responseObject.result = {
+              type : 0,
+              minutes:0,
+              hours:0
+            };
+        }else {
+          return {feedback : "Revisa la frase.", source:words[1]};
+        }
+        return responseObject;
       }else{
-        return {feedback : "Revisa la frase.", source:responseObject.input.core};
+        return {feedback : "La hora comienza con 'Es la' ó 'Son las' si no es mediodía, medianoche ó la frase (minutos) para (horas).", source:words[1]};
       }
-      return responseObject;
     }else{
+      if(words.length === 2){ // gives feedback about es o son at the beginning of the sentence.
+        if(!(phrase.match(/^(?:[eé][szc]|[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))/i))){
+          responseObject.feedback.push("La hora siempre comienza con 'Es' ó 'Son'.");
+          return responseObject;
+        }
+        return responseObject;
+      }
       responseObject.input = {whole:phrase};
       responseObject.results = {};
-      let introduction= phrase.match(/^(?:[eé][szc]|^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))\sl[aá][szc]?/i);
-      if(introduction){
-        responseObject.input ={...responseObject.input,
-          intro:phrase.slice(0,introduction[0].length)
+      if(phrase.match(/^(?:[eé][szc]|[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))(?:\sl[aá][szc]?)?/i)){
+        let introduction= phrase.match(/^(?:[eé][szc]|^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))(?:\sl[aá][szc]?)?/gi);
+        if(introduction){
+          responseObject.input ={...responseObject.input,
+            intro:phrase.slice(0,introduction[0].length)
+          }
         }
       }else{
-        responseObject.feedback.push("La hora siempre comienza con 'Es la' ó 'Son las'.");
-      }
-      let ending= phrase.match(/(?:d[eé]\sl[aá]\s\b[A-zÀ-ú]*\b).?$/i);
-      if(ending){
-        responseObject.input ={...responseObject.input,
-          ending:phrase.slice(ending.index)
+        return responseObject;
+      }   
+      if(phrase.match(/.+\.$/)){// checks if the phrase has a period at the end and the period of time like de la mañana, de la tarde o de la noche. 
+        let ending= phrase.match(/(?:d[eé]\sl[aá]\s\b[A-zÀ-ú]*\b).?$/i);
+        if(ending){
+          responseObject.input ={...responseObject.input,
+            ending:phrase.slice(ending.index)
+          }
+          let response = /d[eé]\sl[aá]\s(\b[A-zÀ-ú]*\b).?$/i.exec(responseObject.input.ending);
+          responseObject.results.period = this.identifyPeriod(response[1]);
+        }else{
+          responseObject.results.period = false;
+          responseObject.feedback.push("Puedes terminar la frase con; de la mañana, de la tarde o de la noche, para que sea mas clara.");
         }
-        let response = /d[eé]\sl[aá]\s(\b[A-zÀ-ú]*\b).?$/i.exec(responseObject.input.ending);
-        responseObject.results.period = this.identifyPeriod(response[1]);
-      }else{
-        responseObject.results.period = undefined;
-        responseObject.feedback.push("Puedes terminar la frase con: de la mañana, de la tarde o de la noche.");
       }
       responseObject.input={...responseObject.input,
-        core: phrase.replace(responseObject.input.intro,"").replace(responseObject.input.ending,"").trim()
+        core: phrase.replace(responseObject.input.intro,"").replace(responseObject.input.ending,"").replace(".","").trim()
       }
-      if(responseObject.input.core.match(/^\b[A-zÀ-ú]*\b\.?$/i)){
-        let hoursWritten =/^(\b[A-zÀ-ú]*\b)\.?$/i.exec(responseObject.input.core);
-        responseObject.results = {...responseObject.results,
-          type:0,
-          minutes:0,
-          hours: this.identifyHours(hoursWritten[1])
-        }
-        responseObject.feedback.push("Puedes agregar 'en punto' después de la hora.");
-      }else if(responseObject.input.core.match(/[eé]n\sp(?:ou|[oóuú])nt(?:ou|[oóuú])/i)){//en punto
-        let hoursWritten =/(\b[A-zÀ-ú]*\b)\s[eé]n\sp(?:ou|[oóuú])nt(?:ou|[oóuú])/i.exec(responseObject.input.core);
-        if(hoursWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
-        responseObject.results = {...responseObject.results,
-          type:0,
-          minutes:0,
-          hours: this.identifyHours(hoursWritten[1])
-        }
-      }else if(responseObject.input.core.match(/(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s/i)){//y
-        let timeWritten =/(\b[A-zÀ-ú]*\b)\s(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s?[iy]\s(\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?)/i.exec(responseObject.input.core);
-        if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
-        let minutes = this.identifyMinutes(timeWritten[2]);
-        let hours = this.identifyHours(timeWritten[1]);
-        if(minutes>40){
-          responseObject.feedback.push("La frase '(horas) y (minutos)' se usa normalmente hasta los 40 minutos.");
-        }
-        responseObject.results = {...responseObject.results,
-          type:1,
-          minutes:minutes,
-          hours: hours
-        }
-      }else if(responseObject.input.core.match(/p[aá]r[aá]/i)){//para
-        let timeWritten = /((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b)\sp[aá]r[aá]\sl[aá][cszkq]?\s(\b[A-zÀ-ú]*\b)/i.exec(responseObject.input.core);
-        if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
-          let minutes = this.identifyMinutes(timeWritten[1]);
-          let hours = this.identifyHours(timeWritten[2]);
+      console.log(responseObject);
+
+      if(responseObject.results.period !== undefined){
+        if(responseObject.input.core.match(/^\b[A-zÀ-ú]*\b$/i)){// checks if the phrase is short like "son las diez."
+          responseObject.input.intro = this.checkIntro(responseObject.input.intro,2);
+          console.log(responseObject.input.intro);
+
+
+
+          let hoursWritten =/^(\b[A-zÀ-ú]*\b)$/i.exec(responseObject.input.core);
+          responseObject.results = {...responseObject.results,
+            type:0,
+            minutes:0,
+            hours: this.identifyHours(hoursWritten[1])
+          }
+          responseObject.feedback.push("Puedes agregar 'en punto' después de la hora.");
+        }else if(responseObject.input.core.match(/[eé]n\sp(?:ou|[oóuú])nt(?:ou|[oóuú])/i)){//en punto
+          let hoursWritten =/(\b[A-zÀ-ú]*\b)\s[eé]n\sp(?:ou|[oóuú])nt(?:ou|[oóuú])$/i.exec(responseObject.input.core);
+          if(hoursWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
+          responseObject.results = {...responseObject.results,
+            type:0,
+            minutes:0,
+            hours: this.identifyHours(hoursWritten[1])
+          }
+        }else if(responseObject.input.core.match(/(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s(?:\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?)/i)){//y
+          let timeWritten =/(\b[A-zÀ-ú]*\b)\s(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s?[iy]\s(\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?)$/i.exec(responseObject.input.core);
+          if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
+            let minutes = this.identifyMinutes(timeWritten[2]);
+            let hours = this.identifyHours(timeWritten[1]);
+            if(minutes>40){
+              responseObject.feedback.push("La frase '(horas) y (minutos)' se usa normalmente hasta los 40 minutos.");
+            }
+            responseObject.results = {...responseObject.results,
+              type:1,
+              minutes:minutes,
+              hours: hours
+            }
+        }else if(responseObject.input.core.match(/p[aá]r[aá]\sl[aá][szc]?\s/i)){//para
+          let timeWritten = /((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b)\sp[aá]r[aá]\sl[aá][cszkq]?\s(\b[A-zÀ-ú]*\b$)/i.exec(responseObject.input.core);
+          if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
+            let minutes = this.identifyMinutes(timeWritten[1]);
+            let hours = this.identifyHours(timeWritten[2]);
+            if(minutes>25){
+              responseObject.feedback.push("La frase '(minutos) para las (horas)' se usa cuando faltan menos de 25 minutos para cumplir la hora.")
+            }
+            responseObject.results = {...responseObject.results,
+              type:2,
+              minutes: minutes,
+              hours: hours
+            }
+        }else if(responseObject.input.core.match(/m[eé]n(?:ou|[oóuú])[szc]/)){//menos
+          let timeWritten = /(\b[A-zÀ-ú]*\b)\sm[eé]n(?:ou|[oóuú])[szc]\s((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b$)/i.exec(responseObject.input.core);
+          if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
+          let minutes = this.identifyMinutes(timeWritten[2]);
+          let hours = this.identifyHours(timeWritten[1]);
           if(minutes>25){
-            return {feedback : "La frase '(minutos) para las (horas)' se usa cuando faltan menos de 25 minutos para cumplir la hora.",
-              source: responseObject.input.core
-          };
+            responseObject.feedback.push("La frase '(horas) menos (minutos)' se usa cuando faltan menos de 25 minutos para cumplir la hora.")
+          }
+          responseObject.results = {...responseObject.results,
+            type:2,
+            minutes:minutes,
+            hours: hours
+          }
+        }else{
+          return {feedback : "Revisa la frase.", source:responseObject.input.core};
         }
-        responseObject.results = {...responseObject.results,
-          type:2,
-          minutes: minutes,
-          hours: hours
-        }
-      }else if(responseObject.input.core.match(/m[eé]n(?:ou|[oóuú])[szc]/)){//menos
-        let timeWritten = /(\b[A-zÀ-ú]*\b)\sm[eé]n(?:ou|[oóuú])[szc]\s((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b)/i.exec(responseObject.input.core);
-        if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core};
-        let minutes = this.identifyMinutes(timeWritten[2]);
-        let hours = this.identifyHours(timeWritten[1]);
-          if(minutes>25){
-            return {feedback : "La frase '(horas) menos (minutos)' se usa cuando faltan menos de 25 minutos para cumplir la hora.",
-              source: responseObject.input.core
-          };
-        }
-        responseObject.results = {...responseObject.results,
-          type:2,
-          minutes:minutes,
-          hours: hours
-        }
-      }      
+      }else{
+        return responseObject
+      }
     }
     if(Object.values(responseObject.results).some((value)=>typeof value==="object")){
       return responseObject
@@ -332,12 +362,19 @@ export let escrito ={
      return responseObject
     }
   },
+  checkIntro(intro,words){
+    let regEx=(words === 1)? /^(?:[eé][szc]|[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))/i:/^(?:[eé][szc]|[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))\sl[aá][szc]?/i;
+    if(intro.match(regEx)){
+      return true;
+    }else{
+      return false;
+    }
+  },
   periodHourCongruence(timeObject){
     let responseObject=timeObject;
-    if(!(timeObject.results.period===0 || timeObject.results.period=== undefined)){
+    if(!(timeObject.results.period===0 || timeObject.results.period=== false)){
       responseObject.results.hours = (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12;
     }
-
     if(timeObject.results.period === 0){
       if((timeObject.results.hours>12 && timeObject.results.hours<24) || timeObject.results.hours===0){
         responseObject.feedback.push("El periodo 'mañana' se usa entre la 1 y las 12 horas.");
@@ -355,7 +392,7 @@ export let escrito ={
       responseObject.results.hours = timeObject.results.hours-1;
       responseObject.results.minutes = 60-timeObject.results.minutes;
     };
-    if(timeObject.results.period === undefined){
+    if(timeObject.results.period === false){
       responseObject.results.hours =[responseObject.results.hours, (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12]
     }
     return responseObject;
@@ -411,7 +448,6 @@ export let escrito ={
         source: hoursWritten
       }
     }else if(number>12){
-      
       return {
         feedback: "Después de las 12 se comienza a contar desde 1 de nuevo.",
         source: hoursWritten

@@ -17,12 +17,14 @@ class App extends Component {
         digitalInteraction:true,
         digitalAnswer:false,
         digital:24,
-        writtenType:2,
-        writtenAnswer:false,
+        writtenType:0,
+        writtenAnswer:true,
         writtenInteraction:false
-      }
+      },
+      feedback:""
     }
-    this.changeTime = this.changeTime.bind(this)
+    this.changeTime = this.changeTime.bind(this);
+    this.updateFeedback = this.updateFeedback.bind(this); 
   }
   
   componentDidMount(){
@@ -34,6 +36,10 @@ class App extends Component {
       hours:hours,
       minutes:minutes,
     })
+  }
+
+  updateFeedback(timeObject){    
+    this.setState({feedback: timeObject.feedback})
   }
 
   parseURLParams(url) {
@@ -56,6 +62,10 @@ class App extends Component {
     return parms;
 }
 
+parseFeedback(feedback){
+  // console.log(feedback);
+}
+
   render(){
     return (
       <div className="App">
@@ -67,7 +77,8 @@ class App extends Component {
           </div>
           <div className="texto">
             <p className="pregunta">¿Qué hora és?</p>
-            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} response={this.changeTime} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType}/>
+            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} response={this.updateFeedback} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType}/>'
+            <div className="feedback">{this.parseFeedback(this.state.feedback)}</div>
           </div>
         </div>
       </div>

@@ -23,13 +23,36 @@ class Escrito extends Component{
       hours:undefined,
       minutes:undefined,
       feedback:[],
-      input:""
+      input:"",
+      inputWithFeedback: null
     }
     this.handleChange = this.handleChange.bind(this);
   }
+
+  showInteraction(e){
+    if(this.props.interaction){
+      if(e.target.classList.contains("clockContainers")){
+        let span = e.target.getElementsByClassName("digitalSpan")[0];
+        let show = e.target.getElementsByClassName("digitalShow")[0];
+        span.classList.add("show");
+        show.classList.remove("show");
+        let interaction = span.getElementsByClassName("digitalInteraction")[0];
+        interaction.focus();
+      }
+    }
+  }
+  
+
+
+
+
+
+
   static getDerivedStateFromProps(props,state){
     if(props.answer){
-      return null
+      return {input:escrito.input,
+        hours:escrito.hours,
+        minutes: escrito.minutes};
     }else{
       return{
         hours:props.hours,
@@ -37,33 +60,80 @@ class Escrito extends Component{
       }
     }
   }
-  componentDidMount(){
-    console.log(escrito.analyzePhrase("son las veinte para las cinco de la noche."));
-  }
 
   write(hours,minutes){
-    let text = es.phraseFinder(this.props.hours, this.props.minutes, this.props.mode);
+    if(this.props.answer === true){
+      return this.state.inputWithFeedback;
+    }else{
+      let text = es.phraseFinder(hours, minutes, this.props.mode);
       let content =  text.map((phrase,index)=>{
         return <p key={`${phrase.type}${index}`}><span className={`phrasePart phrase${phrase.type}`}>{phrase.phrase}</span></p>
       })
       return content;
+    }
   }
 
   handleChange(e){
-    this.setState({input:e.value});
-    escrito.input = e.value;
-    if(e.value.length>10){
-      escrito.analyzePhrase(e.value)
+    this.setState({input:e.target.value});
+    escrito.input = e.target.value;
+    let timeObject = escrito.analyzePhrase(e.target.value)
+    console.log(timeObject);
+    if(timeObject.results){
+      let coloredFeedback = [...timeObject.feedback];
+      let coloredInput = escrito.input;
+      let objects = 0;
+      let keys = Object.keys(timeObject.results);
+
+      if(keys.length > 0){
+        let colors=["green","blue","purple","red"];
+        let changes = []
+        keys.forEach((key)=>{
+          if(typeof timeObject.results[key] === "object"){
+            //marcar el feedback con colores.
+            coloredFeedback.push(<span key={timeObject.results[key]} style ={{color: colors[objects]}}>{timeObject.results[key].feedback}</span>);
+            let index = coloredInput.search(timeObject.results[key].source);
+
+            changes.push({
+              start:index,
+              end: index+timeObject.results[key].source.length,
+              color:objects});
+            objects ++;
+          }
+
+
+
+
+          //Aquí me quedé
+
+          
+        })
+        let changesOrderedIndexes = changes.map((change)=>change.start);
+          changesOrderedIndexes = changesOrderedIndexes.sort((a,b)=>a-b);
+          console.log(timeObject);
+          console.log(changesOrderedIndexes);
+        
+        if(objects === 0){
+          return{
+            results:timeObject.results,
+            feedback:timeObject.feedback
+          }
+        }else{
+          this.setState({inputWithFeedback:coloredInput})
+          return{
+            feedback:coloredFeedback
+          }
+        }
+      }
     }
+      // this.props.response(escrito.analyzePhrase(e.target.value))
   }
+
   
   render(){
-      
       return (<div className="escritoContainer">
         <div className="escrito show" >{this.write(this.state.hours, this.state.minutes)}</div>
         <span className="escritoSpan">
-          {/* <input className="escritoInteraction" value={escrito.input} onChange={this.handleChange}></input> */}
-          <span className="escritoFeedback"></span>
+          <input className="escritoInteraction" value={escrito.input} onChange={this.handleChange}></input>
         </span>
       </div>);
   }

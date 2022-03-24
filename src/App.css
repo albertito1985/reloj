@@ -317,3 +317,8 @@ total 400+240+20 = 660*/
 .phrase2{
   background-color: #E97F02;
 }
+
+.feedback{
+  height:50px;
+  width:200px;
+}
