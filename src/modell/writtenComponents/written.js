@@ -1,17 +1,18 @@
 export let es = {
-    phraseFinder(hours, minutes, mode){
-        let phraseNumber = es.choosePhrase(minutes,mode);
-        return es.generatePhrases(hours,minutes,phraseNumber,mode); 
+    //falta agregar el type
+    phraseFinder(hours, minutes, mode, ending=true, forceType=false){
+        let phraseNumber= [forceType] || es.choosePhrase(minutes,mode);
+        return es.generatePhrases(hours,minutes,phraseNumber,mode,ending);
     },
-    generatePhrases(hours,minutes,phraseNumber,mode){
+    generatePhrases(hours,minutes,phraseNumber,mode,ending){
             let returnArray = [];
             phraseNumber.forEach((phrase)=>{
-                returnArray = returnArray.concat(es.phrases[phrase](hours,minutes,mode));
+                returnArray = returnArray.concat(es.phrases[phrase](hours,minutes,mode,ending));
             });
         return returnArray;
     },
     choosePhrase:(minutes,mode)=>{
-        if(minutes === 0){
+        if(minutes === 0 || mode === 4){
             return [0];
         }else {
             if(mode === 2 ){
@@ -26,7 +27,7 @@ export let es = {
         }
     },
     phrases : [
-        (hours,minutes,mode)=>{
+        (hours,minutes,mode,ending)=>{
             //solo en punto
             if(mode !== 2 ){
                 if(hours === 12 && minutes === 0){
@@ -35,18 +36,18 @@ export let es = {
                     return [{type:0,phrase: "Es medianoche."}]
                 }
             }
-            let endings = es.endings(hours,mode);
+            let endings=es.endings(hours,mode,ending);
             hours = es.modeAdaptation(hours,mode);
             let hoursW = es.numberFinder(hours);
             let returnArray = endings.map((ending,index)=>{
-                return {type:0,phrase: (hoursW === "uno")? `Es la una en punto ${ending}`: `Son las ${hoursW} en punto${ending}`};
+                return {type:0,phrase: (hoursW === "uno")? `Es la una${(mode !== 4)?" en punto":""}${ending}`: `Son las ${hoursW}${(mode !== 4)?" en punto":""}${ending}`};
             });
             return returnArray;
             
         },
-        (hours, minutes,mode)=>{
+        (hours, minutes,mode,ending)=>{
             //1< min <39
-            let endings = es.endings(hours,mode);
+            let endings = es.endings(hours,mode,ending);
             hours = es.modeAdaptation(hours,mode);
             let hoursW = es.hourExceptions(es.numberFinder(hours),mode);
             let minutesW = es.minuteExceptions(es.numberFinder(minutes));
@@ -56,10 +57,10 @@ export let es = {
             });
             return returnArray;
         },
-        (hours,minutes,mode)=>{
+        (hours,minutes,mode,ending)=>{
             //40<min <59
             minutes = 60-minutes;
-            let endings = es.endings(hours+1,mode);
+            let endings = es.endings(hours+1,mode,ending);
             hours = es.modeAdaptation(hours+1,mode);
             let hoursW = es.hourExceptions(es.numberFinder(hours));
             let minutesW = es.minuteExceptions(es.numberFinder(minutes));
@@ -84,7 +85,16 @@ export let es = {
         }
         return hours;
     },
-    endings:(hours,mode)=>{
+    endings:(hours,mode,ending)=>{
+        if(ending === false){
+            return ["."];
+        }else if(ending === 0){
+            return [" de la mañana."];
+        }else if(ending === 1){
+            return [" de la tarde."];
+        }else if(ending === 2){
+            return [" de la noche."];
+        }
         if(mode === 3){
             if(hours<13){
                 return [" AM."];

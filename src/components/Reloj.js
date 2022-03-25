@@ -41,13 +41,6 @@ class Escrito extends Component{
       }
     }
   }
-  
-
-
-
-
-
-
   static getDerivedStateFromProps(props,state){
     if(props.answer){
       return {input:escrito.input,
@@ -72,68 +65,100 @@ class Escrito extends Component{
       return content;
     }
   }
+  randomGreeting(){
+    let greetings = ["Perfecto!","Muy bién!","Felicidades!", "Enhorabuena!","Bien hecho!","Buen trabajo!"];
+    return <span key="greetings">{greetings[Math.floor(Math.random() * greetings.length)]}</span>;
+  }
 
   handleChange(e){
+    if(e.target.value.match(/.+\..+$/)){
+      return null;
+    }
     this.setState({input:e.target.value});
     escrito.input = e.target.value;
-    let timeObject = escrito.analyzePhrase(e.target.value)
-    console.log(timeObject);
-    if(timeObject.results){
+    let timeObject = escrito.analyzePhrase(e.target.value);
+    if(timeObject.results){//if the timeObject has a results object
+      timeObject.feedback = timeObject.feedback.map((feed,index)=><span key={`feed${index}`}>{feed}</span>);
       let coloredFeedback = [...timeObject.feedback];
-      let coloredInput = escrito.input;
-      let objects = 0;
+      let coloredInput = [];
+      let objects = null;
       let keys = Object.keys(timeObject.results);
-
-      if(keys.length > 0){
+      if(keys.length > 0){//if the results came populated.
+        objects=0;
+        let inputCopy = escrito.input;
         let colors=["green","blue","purple","red"];
         let changes = []
-        keys.forEach((key)=>{
-          if(typeof timeObject.results[key] === "object"){
-            //marcar el feedback con colores.
-            coloredFeedback.push(<span key={timeObject.results[key]} style ={{color: colors[objects]}}>{timeObject.results[key].feedback}</span>);
-            let index = coloredInput.search(timeObject.results[key].source);
-
+        keys.forEach((key)=>{//checks if there is some issue.
+          if(typeof timeObject.results[key] === "object" && !(Array.isArray(timeObject.results[key]))){//create sentences from the issues
+            coloredFeedback.push(<span key={key} style ={{color: colors[objects]}}>{timeObject.results[key].feedback}</span>);
             changes.push({
-              start:index,
-              end: index+timeObject.results[key].source.length,
+              start:timeObject.results[key].index[0],
+              end:timeObject.results[key].index[1],
               color:objects});
             objects ++;
           }
-
-
-
-
-          //Aquí me quedé
-
-          
         })
-        let changesOrderedIndexes = changes.map((change)=>change.start);
-          changesOrderedIndexes = changesOrderedIndexes.sort((a,b)=>a-b);
-          console.log(timeObject);
-          console.log(changesOrderedIndexes);
-        
-        if(objects === 0){
-          return{
-            results:timeObject.results,
-            feedback:timeObject.feedback
-          }
-        }else{
-          this.setState({inputWithFeedback:coloredInput})
-          return{
-            feedback:coloredFeedback
-          }
+        //color the words
+        if(changes.length>0){
+          let changesOrderedIndexes = changes.map((change)=>change.start);
+          changesOrderedIndexes = changesOrderedIndexes.sort((a,b)=>b-a);
+          changesOrderedIndexes.forEach((wordIndex)=>{
+            let selectedObject = changes.find(change=>change.start === wordIndex);
+            coloredInput.unshift(inputCopy.slice(selectedObject.end));
+            inputCopy= inputCopy.slice(0,selectedObject.end);
+            coloredInput.unshift(<span style ={{color: colors[selectedObject.color]}} key={`word${wordIndex}`}>{inputCopy.slice(selectedObject.start)}</span>);
+            inputCopy= inputCopy.slice(0,selectedObject.start);
+          });
+          coloredInput.unshift(inputCopy);
         }
       }
+      if(objects === null){
+        this.setState({inputWithFeedback:escrito.input});
+        this.props.response({
+          feedback:coloredFeedback
+        });
+      }else if(objects === 0){//if the result came and there are NO issues
+        //compare with the correct answer.
+        let correctWriting;
+        console.log(timeObject);
+        if(Array.isArray(timeObject.results.hours)){
+          correctWriting = es.phraseFinder(timeObject.results.hours[0], timeObject.results.minutes, timeObject.results.mode,timeObject.results.period,timeObject.results.type)[0].phrase;
+        }else{
+          correctWriting = es.phraseFinder(timeObject.results.hours, timeObject.results.minutes, timeObject.results.mode,timeObject.results.period,timeObject.results.type)[0].phrase;
+        }
+        if(correctWriting===e.target.value){
+          this.setState({inputWithFeedback:escrito.input});
+          this.props.response({
+            hours:timeObject.results.hours,
+            minutes:timeObject.results.minutes,
+            feedback:coloredFeedback
+          });
+        }else{
+          coloredFeedback.push(<span key="comparison">Corrige detalles en la oración; {correctWriting}</span>)
+          this.setState({inputWithFeedback:escrito.input});
+          this.props.response({
+            feedback:coloredFeedback
+          });
+        }
+      }else{//if the result came and there ARE issues
+        this.setState({inputWithFeedback:coloredInput});
+        this.props.response({
+          feedback:coloredFeedback
+        });
+      }
+    }else{//response without results
+      this.setState({inputWithFeedback:escrito.input});
+      this.props.response({feedback:timeObject.feedback})
     }
-      // this.props.response(escrito.analyzePhrase(e.target.value))
   }
 
   
   render(){
       return (<div className="escritoContainer">
-        <div className="escrito show" >{this.write(this.state.hours, this.state.minutes)}</div>
-        <span className="escritoSpan">
-          <input className="escritoInteraction" value={escrito.input} onChange={this.handleChange}></input>
+        <div className={`escrito${(this.props.answer === true)?'':' show'}`} >{this.write(this.state.hours, this.state.minutes)}</div>
+        <span className={`escritoSpan${(this.props.answer === true)?' show':''}`}>
+          <div className="escritoInteractionShow" >{this.write(this.state.hours, this.state.minutes)}</div>
+          <input className="escritoInteraction" placeholder="Escribe la hora aquí. Termina con un punto." value={escrito.input} onChange={this.handleChange}></input>
         </span>
       </div>);
   }

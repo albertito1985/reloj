@@ -38,7 +38,7 @@ class App extends Component {
     })
   }
 
-  updateFeedback(timeObject){    
+  updateFeedback(timeObject){
     this.setState({feedback: timeObject.feedback})
   }
 
@@ -62,9 +62,6 @@ class App extends Component {
     return parms;
 }
 
-parseFeedback(feedback){
-  // console.log(feedback);
-}
 
   render(){
     return (
@@ -77,8 +74,8 @@ parseFeedback(feedback){
           </div>
           <div className="texto">
             <p className="pregunta">¿Qué hora és?</p>
-            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} response={this.updateFeedback} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType}/>'
-            <div className="feedback">{this.parseFeedback(this.state.feedback)}</div>
+            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} response={this.updateFeedback} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType}/>
+            <div className="feedback">{this.state.feedback}</div>
           </div>
         </div>
       </div>
