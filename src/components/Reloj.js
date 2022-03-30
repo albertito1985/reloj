@@ -12,7 +12,10 @@ class Disco extends Component {
     }
   
     render(){
-      return(<div className="disco" style={this.calculateDegrees()}></div>)
+      return(<div className="discoContainer">
+        <div className="disco" style={this.calculateDegrees()}></div>
+        <div className="discoArrow"></div>
+      </div>)
     }
   }
   
@@ -27,6 +30,9 @@ class Escrito extends Component{
       inputWithFeedback: null
     }
     this.handleChange = this.handleChange.bind(this);
+  }
+  componentDidMount(){
+    escrito.analyzePhrase("sadfsad son las doce y media sdfasdf.");
   }
 
   showInteraction(e){
@@ -70,14 +76,21 @@ class Escrito extends Component{
     return <span key="greetings">{greetings[Math.floor(Math.random() * greetings.length)]}</span>;
   }
 
+  changeValue(value){
+
+  }
+
   handleChange(e){
+    
     if(e.target.value.match(/.+\..+$/)){
       return null;
     }
     this.setState({input:e.target.value});
     escrito.input = e.target.value;
     let timeObject = escrito.analyzePhrase(e.target.value);
+    return null;
     if(timeObject.results){//if the timeObject has a results object
+      console.log(timeObject);
       timeObject.feedback = timeObject.feedback.map((feed,index)=><span key={`feed${index}`}>{feed}</span>);
       let coloredFeedback = [...timeObject.feedback];
       let coloredInput = [];
@@ -112,7 +125,32 @@ class Escrito extends Component{
           coloredInput.unshift(inputCopy);
         }
       }
-      if(objects === null){
+
+
+
+      
+      //Create alternatives
+      if(Object.keys(timeObject.alternatives).length > 0 ){
+        Object.keys(timeObject.alternatives).forEach((index)=>{
+          let newValue;
+          switch(index){
+            case "intro":
+
+              break;
+            default:
+              break;
+
+          }
+          timeObject.alternatives[index] = timeObject.alternatives[index].map((alternative,index)=><span className="alternatives" key={alternative}></span>)
+        })
+      }
+
+
+
+
+
+
+      if(objects === null){// if the results came unpopulated
         this.setState({inputWithFeedback:escrito.input});
         this.props.response({
           feedback:coloredFeedback
@@ -120,7 +158,6 @@ class Escrito extends Component{
       }else if(objects === 0){//if the result came and there are NO issues
         //compare with the correct answer.
         let correctWriting;
-        console.log(timeObject);
         if(Array.isArray(timeObject.results.hours)){
           correctWriting = es.phraseFinder(timeObject.results.hours[0], timeObject.results.minutes, timeObject.results.mode,timeObject.results.period,timeObject.results.type)[0].phrase;
         }else{
@@ -146,13 +183,13 @@ class Escrito extends Component{
           feedback:coloredFeedback
         });
       }
-    }else{//response without results
+    }else{//response without results object
+      console.log("timeObject sin results");
       this.setState({inputWithFeedback:escrito.input});
       this.props.response({feedback:timeObject.feedback})
     }
   }
 
-  
   render(){
       return (<div className="escritoContainer">
         <div className={`escrito${(this.props.answer === true)?'':' show'}`} >{this.write(this.state.hours, this.state.minutes)}</div>

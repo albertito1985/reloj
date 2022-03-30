@@ -40,16 +40,26 @@ total 400+240+20 = 660*/
 
 .disco{
   --rotate:0;
-  position:absolute;
+  position:relative;
   height:150px;
   width:150px;
   background-image:url("./images/disco.svg");
   background-size:cover;
-  right:200px; 
-  transform:translate(50%, -50%) rotate(var(--rotate));
-  z-index:-1;
-  
+  /* right:200px;  */
+  /* transform:translate(50%, -50%) rotate(var(--rotate)); */
+  transform:rotate(var(--rotate));
+  z-index:10;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
+
+.disco .arrow{
+font-size:2em;
+color:#E97F02;
+transform:rotate(calc(var(--rotate) * -1));
+}
+
 .relojes {
   display:flex;
   flex-direction:column;

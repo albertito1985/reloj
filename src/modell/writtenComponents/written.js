@@ -1,14 +1,14 @@
 export let es = {
     //falta agregar el type
     phraseFinder(hours, minutes, mode, ending=true, forceType=false){
-        let phraseNumber= [forceType] || es.choosePhrase(minutes,mode);
+        let phraseNumber= (forceType)?[forceType]: es.choosePhrase(minutes,mode);
         return es.generatePhrases(hours,minutes,phraseNumber,mode,ending);
     },
     generatePhrases(hours,minutes,phraseNumber,mode,ending){
-            let returnArray = [];
-            phraseNumber.forEach((phrase)=>{
-                returnArray = returnArray.concat(es.phrases[phrase](hours,minutes,mode,ending));
-            });
+        let returnArray = [];
+        phraseNumber.forEach((phrase)=>{
+            returnArray = returnArray.concat(es.phrases[phrase](hours,minutes,mode,ending));
+        });
         return returnArray;
     },
     choosePhrase:(minutes,mode)=>{
