@@ -1,6 +1,7 @@
 import {language} from './swToEsLetterExceptions';
 import {es} from '../modell/writtenComponents/written'; 
 import { toBePartiallyChecked } from '@testing-library/jest-dom/dist/matchers';
+import {EndALoop} from './useful';
 export let reloj = {
     hours:0,
     minutes:0,
@@ -311,16 +312,57 @@ export let escrito ={
     // }else{
     if(true){
       let phraseParts =this.identifyPhraseParts(phrase);
-      Object.keys(phraseParts).forEach((key)=>{
+      let structure = this.senseStructure(phraseParts);
+      if(structure.find((object)=>object.name ==="undefined")){//checks for unidentified parts in the phrase
+        return {
+          action: "delete",
+          phrasePart: "undefined",
+          phraseStructure:structure
+        }
+      }
+      let duplicated = null;
+      Object.keys(phraseParts).forEach((key)=>{//checks for duplicated phrase parts and return alternatives.
         if(phraseParts[key]!== null && phraseParts[key].duplicated === true){
-          if(phraseParts[key].position.length >3){
-            return {feedback : "Revisa la frase", source:phrase};
-          }
-          responseObject.alternatives = this.createEitherOrAlternatives(phrase,phraseParts[key].position);
-          return responseObject;
+          duplicated = key;
         }
       });
-      responseObject.input = this.analyzePhraseParts(phraseParts);
+      if(duplicated !== null){
+        if(phraseParts[duplicated].position.length >3){
+          return {action:"show", feedback : "Revisa la frase"};
+        }else{
+          return {
+            action:"alternatives",
+            phraseParts:phraseParts,
+            feedback:"Hay partes duplicadas",
+            part:duplicated,
+            phraseStructure:structure
+          }
+        }
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+      
+    this.IdentifyRightStructure(structure,phraseParts);
+
+
+      return 0;
+      
+      
+      
+      
+      
+      
+
 
 
       
@@ -519,43 +561,31 @@ export let escrito ={
     responseObject = this.periodHourCongruence(responseObject);
     return responseObject
   },
-  createEitherOrAlternatives(phrase,alternativesPositions){
-    let returnObjects=[];
-    let alternativePositionsDescendent = alternativesPositions.sort((a,b)=>b[0]-a[0]);
-    alternativePositionsDescendent.forEach((alternative,index)=>{
-      let elements=[];
-      let value="";
-      let division={
-        after :(alternative[1]=== phrase.length)?null:alternativePositionsDescendent.slice(0,index),
-        actualPhrase:phrase.slice(...alternative),
-        before:(alternative[0] === 0)?null:alternativePositionsDescendent.slice(index+1,alternativePositionsDescendent.length)
-      }
-      let string=phrase;
-      if(division.after !== null){//delete all the ducplicated phrases after the actual one.
-        division.after.forEach((subAlternative)=>{
-          string = string.slice(0,subAlternative[0]) + string.slice(subAlternative[1],string.length);
-        });
-        string = string.replace(/\s$/,"").replace(/\s+/g," ").replace(/\s\./,".");
-        let end = string.slice(alternative[1],string.length);
-        elements.unshift(end);//add the rest of the phrase
-        value = end;
-      }
-      elements.unshift(<span className="alternativeBold">{division.actualPhrase}</span>);//add the part of the phrase that will be highlighted.
-      value = division.actualPhrase + value;
-      string = string.slice(0,alternative[0]);//make a string from the begining of the sentence to the actual phrase.
+  IdentifyRightStructure(structure,phraseParts){
+    console.log(structure);
+    let order = ["intro","number","core","number","clarifier","ending","point"];
 
-      if(division.before!== null){//delete all the ducplicated phrases before the actual one.
-        division.before.forEach((subAlternative)=>{
-          string = string.slice(0,subAlternative[0]) + string.slice(subAlternative[1],string.length);
-        });
-        string = string.replace(/^\s/,"").replace(/\s+/g," ");
-        elements.unshift(string);
-        value = string + value;
+
+    if(phraseParts.core === null){
+      let validStructure = [{mandatory:true,part:"intro"},{mandatory:true,part:"number"},{mandatory:false,part:"clarifier"},{mandatory:false,part:"ending"}];
+
+    }else{
+      if(phraseParts.core.type===0){
+
       }
-      returnObjects.push({elements,value});
-    });
-    return returnObjects;
+    }
+    //nota mental
+    /*
+    inte core = [intro, number, optional clarifier, optional ending];
+
+    core type = 0, mode = 0;
+
+    
+    
+    */
+    
   },
+  
   identifyPhraseParts(phrase){
     let returnObject = {
       wholePhrase:{
@@ -585,7 +615,10 @@ export let escrito ={
         hours:[],
         minutes:[],
         duplicated:false
-      }
+      },
+      point:{
+        position:[]
+      },
     }
     //intro
     let introIdentifier = /((?:\b[eé][szc]|\b[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))(?:\sl[aá][szc]?)?)\s/gid;
@@ -629,29 +662,53 @@ export let escrito ={
     }
     //core
     let coreIdentifiers = [
-      {identifier : /(\bm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\b)/gid, type:0, indices:{main:1,hours:1,minutes:1}},
-      {identifier :/(\bm[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\b)/gid, type:0, indices:{main:1,hours:1,minutes:1}},
-      {identifier :/((\b[A-zÀ-ú]*\b)(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s?[iy]\s(\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?))/gid,type:1,indices:{main:1,hours:2,minutes:3}},
-      {identifier :/(((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b)\sp[aá]r[aá]\sl[aá][cszkq]?\s(\b[A-zÀ-ú]*\b))/gid,type:2, mode: 0, indices:{main:1,hours:3,minutes:2}},
-      {identifier :/((\b[A-zÀ-ú]*\b)\sm[eé]n(?:ou|[oóuú])[szc]\s((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b))/gid, type:2, mode: 1, indices:{main:1,hours:2,minutes:3}}
+      {identifier : /\bm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\b/gid, type:0},
+      {identifier :/\bm[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\b/gid, type:0},
+      {identifier :/(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s/gid,type:1},
+      {identifier :/\bp[aá]r[aá]\sl[aá][cszkq]?\b/gid,type:2, mode: 0},
+      {identifier :/\bm[eé]n(?:ou|[oóuú])[szc]\b/gid, type:2, mode: 1}
     ];
+    // let coreIdentifiers = [
+    //   {identifier : /(\bm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\b)/gid, type:0, indices:{main:1,hours:1,minutes:1}},
+    //   {identifier :/(\bm[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\b)/gid, type:0, indices:{main:1,hours:1,minutes:1}},
+    //   {identifier :/((\b[A-zÀ-ú]*\b)(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s(\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?))/gid,type:1,indices:{main:1,hours:2,minutes:3}},
+    //   {identifier :/(((?:\b[A-zÀ-ú]*\b\s[iyí]?\s?)?\b[A-zÀ-ú]*\b)\sp[aá]r[aá]\sl[aá][cszkq]?\s(\b[A-zÀ-ú]*\b))/gid,type:2, mode: 0, indices:{main:1,hours:3,minutes:2}},
+    //   {identifier :/((\b[A-zÀ-ú]*\b)\sm[eé]n(?:ou|[oóuú])[szc]\s((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b))/gid, type:2, mode: 1, indices:{main:1,hours:2,minutes:3}}
+    // ];
+    // coreIdentifiers.forEach((identifier,index)=>{
+    //   let coreTemporal = identifier.identifier.exec(phrase);
+    //   while(coreTemporal !== null) {
+    //     returnObject.core.phrase.push(coreTemporal[identifier.indices.main]);
+    //     returnObject.core.position.push(coreTemporal.indices[identifier.indices.main]);
+    //     returnObject.core.type.push(identifier.type);
+    //     returnObject.core.mode.push((identifier.mode)?identifier.mode:0);
+    //     returnObject.core.hours.push({
+    //       phrase:coreTemporal[identifier.indices.hours],
+    //       position:coreTemporal.indices[identifier.indices.hours]
+    //     });
+    //     returnObject.core.minutes.push({
+    //       phrase:coreTemporal[identifier.indices.minutes],
+    //       position:coreTemporal.indices[identifier.indices.minutes]
+    //     });
+    //     coreTemporal = identifier.identifier.exec(phrase);
+    //   }
+    // })
+    // if(returnObject.core.phrase.length === 0){
+    //   returnObject.core = null;
+    // }else if(returnObject.core.phrase.length >=2){
+    //   returnObject.core.duplicated = true;
+    // }
+    // returnObject.point.position=[/\./d.exec(phrase).indices[0]];
+    // return returnObject;
 
-    // aquí me quedé
+
     coreIdentifiers.forEach((identifier,index)=>{
       let coreTemporal = identifier.identifier.exec(phrase);
       while(coreTemporal !== null) {
-        returnObject.core.phrase.push(coreTemporal[identifier.indices.main]);
-        returnObject.core.position.push(coreTemporal.indices[identifier.indices.main]);
+        returnObject.core.phrase.push(coreTemporal[0]);
+        returnObject.core.position.push(coreTemporal.indices[0]);
         returnObject.core.type.push(identifier.type);
         returnObject.core.mode.push((identifier.mode)?identifier.mode:0);
-        returnObject.core.hours.push({
-          phrase:coreTemporal[identifier.indices.hours],
-          position:coreTemporal.indices[identifier.indices.hours]
-        });
-        returnObject.core.minutes.push({
-          phrase:coreTemporal[identifier.indices.minutes],
-          position:coreTemporal.indices[identifier.indices.minutes]
-        });
         coreTemporal = identifier.identifier.exec(phrase);
       }
     })
@@ -660,37 +717,86 @@ export let escrito ={
     }else if(returnObject.core.phrase.length >=2){
       returnObject.core.duplicated = true;
     }
+    //numbers
+    let numbersTemporal = this.identifyNumbers(phrase);
+    let counter = 0;
+    numbersTemporal.phrase.forEach((phrase,index)=>{
+      returnObject[`number${counter}`] = {
+        phrase: [],
+        position:[],
+        value:[]
+      }
+      returnObject[`number${counter}`].phrase.push(phrase);
+      returnObject[`number${counter}`].position.push(numbersTemporal.position[index]);
+      returnObject[`number${counter}`].value.push(numbersTemporal.value[index]);
+      counter++
+    });
+    //point
+    let pointTemporal = /\./d.exec(phrase)
+    returnObject.point.position=[pointTemporal.indices[0]];
+    returnObject.point.phrase = pointTemporal[0];
     return returnObject;
   },
-  analyzePhraseParts(phraseParts){
+  senseStructure(phraseParts){
     let structure=[];
-    console.log(phraseParts);
-    Object.keys(phraseParts).forEach((key)=>{
-      if(key !== "wholePhrase" && phraseParts[key]!== null && phraseParts[key].position[0][0]===0){
-        structure[0]={name:key,position:phraseParts[key].position[0]};
+    let actualPosition=0;
+    do{
+      let found = false;
+      let actualPositionUpdated = actualPosition;
+      Object.keys(phraseParts).forEach((key)=>{
+        if(phraseParts[key]!== null && key !== "wholePhrase"){
+          phraseParts[key].position.forEach((innerPosition,index)=>{
+            if(innerPosition[0]===actualPositionUpdated){
+              found=true;
+              structure.push({
+                name:key,
+                position:innerPosition,
+                phrase:phraseParts[key].phrase[index]
+              });
+            }
+          })
+          
+        }
+      });
+      if(!(found)){
+        let gapPosition= findGap(phraseParts,actualPosition);
+        let phrase = phraseParts.wholePhrase.phrase[0].slice(...gapPosition);
+        if(phrase.match(/^\s$/)){
+          actualPosition++;
+        }else{
+          if(phrase.match(/^\s/)){
+            gapPosition[0] = gapPosition[0]+1;
+          }
+          if(phrase.match(/\s$/)){
+            gapPosition[1] = gapPosition[1]-1;
+          }
+          phrase = phrase.trim();
+          structure.push({
+            name:"undefined",
+            position:gapPosition,
+            phrase: phrase
+          })
+          actualPosition=structure[structure.length-1].position[1];
+        }  
+      }else{
+        actualPosition=structure[structure.length-1].position[1];
       }
-    });
-    if(structure.length === 0){
-      structure[0]={
-        name:"undefined",
-        position:findGap(phraseParts,0)
-      };
-      
-    }
-
+    }while(structure[structure.length-1].position[1]!==phraseParts.wholePhrase.position[0][1]);
+    return structure;
+    
     function findGap(phraseParts,initialPosition){
       let lowerPosition=phraseParts.wholePhrase.position[0][1];
       Object.keys(phraseParts).forEach((key)=>{
         if(key !== "wholePhrase" && phraseParts[key]!== null){
-         if(phraseParts[key].position[0]>=initialPosition && phraseParts[key].position[0]<lowerPosition){
-          lowerPosition = phraseParts[key].position[0];
-         }
+          phraseParts[key].position.forEach((innerPosition)=>{
+            if(innerPosition[0]>=initialPosition && innerPosition[0]<lowerPosition){
+              lowerPosition = innerPosition[0];
+             }
+          });
         }
       });
       return [initialPosition,lowerPosition];
     }
-    
-    console.log(structure);
   },
   checkIntro(intro,wordsQuantity,relatedNumber,index){
     let regExNumber = (relatedNumber===1)?[/^[eé][szc]/i,/^[eé][szc]\sl[aá]/i]:[/^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ])/i,/^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ])\sl[aá][szc]/i]
@@ -740,6 +846,125 @@ export let escrito ={
       responseObject.results.hours =[responseObject.results.hours, (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12]
     }
     return responseObject;
+  },
+  identifyNumbers(phrasePart){
+    if(phrasePart===""){return null};
+    let returnObject={
+      phrase:[],
+      position:[],
+      value:[]
+    }
+    
+    //find all unit numbers
+    let regExUnder10 = [...this.numerosRegEx[0].slice(0,10)];
+    let numbersUnder10 = findNumbers(regExUnder10,(index)=>index);
+    
+    //find numbers over 10 but under 21
+    let regEx1020 = [...this.numerosRegEx[0].slice(10,20).concat(this.numerosRegEx[2])];
+    let numbers1020 = findNumbers(regEx1020,(index)=>{
+      if(index === 10){
+        return 15;
+      }else if(index === 11){
+        return 30;
+      }else{
+        return index+10;
+      }
+    });
+    
+    //find numbers over 21 but under 60
+    let regEx2160 = [...this.numerosRegEx[1]];
+    let numbers2160 = findNumbers(regEx2160,(index)=>index*10);
+    
+    if(numbers2160.length>0){
+      regExUnder10 = [...this.numerosRegEx[0].slice(0,10)];
+      mergeAdjacentNumbers(numbers2160,numbersUnder10);
+    }
+
+    let resultsArray = numbersUnder10.concat(numbers1020.concat(numbers2160));
+    resultsArray = resultsArray.sort((a,b)=>a.position[0]-b.position[0]);
+    resultsArray.forEach((result)=>{
+      returnObject.phrase.push(phrasePart.slice(...result.position));
+      returnObject.position.push(result.position);
+      returnObject.value.push(result.value);
+    })
+    if(returnObject.phrase.length === 0){
+      return null
+    }else{
+      return returnObject
+    }
+    
+    
+    function mergeAdjacentNumbers(decimals,units){
+      let deleteDecimalIndex = []
+      decimals.forEach((decimal,index)=>{
+        if(decimal.value === 20){
+          let phraseAfter=phrasePart.slice(decimal.position[1],phrasePart.length);
+          let phraseAfterInfo =  /^[A-zÀ-ú]*\b/id.exec(phraseAfter); 
+          if(phraseAfterInfo!==null){
+            let foundNumber = regExUnder10.findIndex((number)=>phraseAfterInfo[0].match(number));
+            if(foundNumber!==-1){
+              decimal.position = [decimal.position[0],decimal.position[1]+phraseAfterInfo.indices[0][1]];
+              decimal.value = decimal.value + foundNumber;
+            }else{
+              deleteDecimalIndex.push(index);
+            }
+          }else{
+            let closestUnit = units.find((unit)=> decimal.position[1] < unit.position[0]);
+            if(closestUnit!==undefined){
+              let phraseInMiddle=phrasePart.slice(decimal.position[1],closestUnit.position[0]);
+              if(phraseInMiddle.match(/^\s?[iyí]?\s$/)){
+                decimal.position = [decimal.position[0],closestUnit.position[1]];
+                decimal.value = decimal.value + closestUnit.value;
+                let deteteUnitIndex = units.findIndex((unit)=>unit.position[0]===closestUnit.position[0]);
+                units.splice(deteteUnitIndex,1);
+              }
+            }
+          } 
+        }else{
+          let closestUnit = units.find((unit)=> decimal.position[1] < unit.position[0]);
+          if(closestUnit!==undefined){
+            let phraseInMiddle=phrasePart.slice(decimal.position[1],closestUnit.position[0]);
+            if(phraseInMiddle.match(/^\s?[iyí]?\s$/)){
+              decimal.position = [decimal.position[0],closestUnit.position[1]];
+              decimal.value = decimal.value + closestUnit.value;
+              let deteteindex = units.findIndex((unit)=>unit.position[0]===closestUnit.position[0]);
+              units.splice(deteteindex,1);
+            }
+          }
+        }
+        
+      });
+      if(deleteDecimalIndex.length>1){
+        deleteDecimalIndex.sort((a,b)=>b-a);
+        deleteDecimalIndex.forEach((index)=>{
+          decimals.splice(index,1);
+        });
+      }else if(deleteDecimalIndex.length===1){
+        decimals.splice(deleteDecimalIndex[0],1);
+      }
+    }
+    function findNumbers(regex,valueFromIndex){
+      let numbers = [];
+      let foundNumber;
+      while(foundNumber!==-1){
+        foundNumber = regex.findIndex((number)=>phrasePart.match(number));
+        if(foundNumber!==-1){
+          let foundNumberInfo = regex[foundNumber].exec(phrasePart);
+          let lastIndexNumberUnder10=0;
+          while(foundNumberInfo!==null){
+            numbers.push({value: valueFromIndex(foundNumber),position:foundNumberInfo.indices[0]});
+            lastIndexNumberUnder10=foundNumberInfo.indices[0][1];
+            regex[foundNumber].lastIndex=lastIndexNumberUnder10;
+            foundNumberInfo = regex[foundNumber].exec(phrasePart);
+            if(foundNumberInfo === null){
+              regex[foundNumber]=/^$/
+            }
+          }
+        }
+      }
+      numbers.sort((a,b)=>a.position[0]-b.position[0]);
+      return numbers;
+    }
   },
   identifyMinutes(minutesWritten,index,coreStartIndex){
     minutesWritten= minutesWritten.split(" ");
@@ -818,8 +1043,9 @@ export let escrito ={
       };
   },
   numerosRegEx : [
-    [/^(?:qu|[cszkq])[eé]r(?:ou|[oóuú])$/,/^(?:ou|[oóuú])n(?:ou|[oóuú]|[aá])$/,/^d(?:ou|[oóuú])[szc]$/,/^tr[eé][szc]$/,/^(?:qu|[cszkq])(?:ou|[oóuú])[aá]tr(?:ou|[oóuú])$/,/^(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])$/,/^[szc][eé][iyí][szc]$/,/^[szc][iyí][eé]t[eé]$/,/^(?:ou|[oóuú])(?:qu|[cszkq])h(?:ou|[oóuú])$/,/^n(?:ou|[oóuú])[eé][vb][eé]$/,/^d[iyí][eé][szc]$/,/^(?:ou|[oóuú])nd?(?:qu|[cszkq])[eé]$/,/^d(?:ou|[oóuú])(?:qu|[cszkq])[eé]$/,/^tr[eé](?:qu|[cszkq])[eé]$/,/^(?:qu|[cszkq])[aá]t(?:ou|[oóuú])r(?:qu|[cszkq])[eé]$/,/^(?:qu|[cszkq])(?:ou|[oóuú])?[iyí]n(?:qu|[cszkq])[eé]$/,/^d[iyí][eé](?:qu|[cszkq])[iyí][szc][eé][iyí][szc]$/,/^d[iyí][eé](?:qu|[cszkq])[iyí][szc][iyí][eé]t[eé]$/,/^d[iyí][eé](?:qu|[cszkq])[iyí](?:ou|[oóuú])(?:qu|[cszkq])h(?:ou|[oóuú])$/,/^d[iyí][eé](?:qu|[cszkq])[iyí]n(?:ou|[oóuú])[eé][vb][eé]$/,/^[vb][eé][iyí]?nt[eé]$/],
-    [/^$/,/^$/,/^[vb][eé][iyí]nt[iyí]/,/^tr[eé][iyí]nt[aá]$/,/^(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]$/,/^(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá]$/],
+    [/\b(?:qu|[cszkq])[eé]r(?:ou|[oóuú])\b/gid,/\b(?:ou|[oóuú])n(?:ou|[oóuú]|[aá])\b/gid,/\bd(?:ou|[oóuú])[szc]\b/gid,/\btr[eé][szc]\b/gid,/\b(?:qu|[cszkq])(?:ou|[oóuú])[aá]tr(?:ou|[oóuú])\b/gid,/\b(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])\b/gid,/\b[szc][eé][iyí][szc]\b/gid,/\b[szc][iyí][eé]t[eé]\b/gid,/\b(?:ou|[oóuú])(?:qu|[cszkq])h(?:ou|[oóuú])\b/gid,/\bn(?:ou|[oóuú])[eé][vb][eé]\b/gid,/\bd[iyí][eé][szc]\b/gid,/\b(?:ou|[oóuú])nd?(?:qu|[cszkq])[eé]\b/gid,/\bd(?:ou|[oóuú])(?:qu|[cszkq])[eé]\b/gid,/\btr[eé](?:qu|[cszkq])[eé]\b/gid,/\b(?:qu|[cszkq])[aá]t(?:ou|[oóuú])r(?:qu|[cszkq])[eé]\b/gid,/\b(?:qu|[cszkq])(?:ou|[oóuú])?[iyí]n(?:qu|[cszkq])[eé]\b/gid,/\bd[iyí][eé](?:qu|[cszkq])[iyí][szc][eé][iyí][szc]\b/gid,/\bd[iyí][eé](?:qu|[cszkq])[iyí][szc][iyí][eé]t[eé]\b/gid,/\bd[iyí][eé](?:qu|[cszkq])[iyí](?:ou|[oóuú])(?:qu|[cszkq])h(?:ou|[oóuú])\b/gid,/\bd[iyí][eé](?:qu|[cszkq])[iyí]n(?:ou|[oóuú])[eé][vb][eé]\b/gid],
+    [/^$/,/^$/,/\b[vb][eé][iyí]?nt[iyíeé]/gid,/\btr[eé][iyí]nt[aá]\b/gid,/\b(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]\b/gid,/\b(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá]\b/gid],
+    [/\b[cszkq](?:ou|[oóuú])[aá]rt(?:ou|[oóuú])\b/gid,/\bm[eé]d[iyí][aá]\b/gid]
   ]
 }
 

@@ -339,6 +339,17 @@ transform:rotate(calc(var(--rotate) * -1));
   justify-content: center;
 }
 
+.alternative{
+  width:100%;
+  height:auto;
+  background-color:red;
+ 
+}
+.alternative .delete{
+  text-decoration: line-through;
+  
+}
+
 
 /*
 ==========================>Generall<==========================
