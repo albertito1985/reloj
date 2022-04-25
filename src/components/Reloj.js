@@ -32,15 +32,14 @@ class Escrito extends Component{
     this.handleChange = this.handleChange.bind(this);
   }
   componentDidMount(){
-    //aquí me quedé
-    //poner todos los cambios desde el state
     let input= null;
     if(this.props.answer === true){
       input = escrito.input;
     }else{
       input = this.state.input;
     }
-
+    
+    this.evaluatePhrase(input);
 
 
 
@@ -51,6 +50,20 @@ class Escrito extends Component{
     
     // this.setState({inputWithFeedback:this.deletePhraseParts(returnthing)});
 
+  }
+
+  componentDidUpdate(prevProps,prevState){
+    if(this.props.answer){
+      let input= null;
+      if(this.props.answer === true){
+        input = escrito.input;
+      }else{
+        input = this.state.input;
+      }
+      if(prevState.input !== this.state.input){
+        this.evaluatePhrase(input);
+      }
+    }
   }
 
   showInteraction(e){
@@ -95,18 +108,17 @@ class Escrito extends Component{
   }
 
   changeInputValue(value){
-    let input = document.getElementById("escritoInteraction");
-    this.setState({input : value,inputWithFeedback: null});
     escrito.input = value;
-
+    this.setState({input : value,inputWithFeedback: null});
   }
 
-  deletePhraseParts(object){
+  deletePhraseParts(inputObject){
     let alternative = [];
     let value= "";
     let key= null;
-    object.phraseStructure.forEach((part,index)=>{
-      if(part.name === object.phrasePart){
+    inputObject.phraseStructure.forEach((part,index)=>{
+      // if(part.name === object.phrasePart){
+        if(inputObject.object.includes(part.name)){
         key+=index;
         if(alternative.length===0){
           alternative.push(<span key = {index} className="delete">{part.phrase}</span>)
@@ -125,47 +137,83 @@ class Escrito extends Component{
       }
     });
     value= value.replace(/\s\s+/gi," ");
-    return <span className="alternative" key={`${object.phrasePart}${key}`} children={alternative} onClick={this.changeInputValue.bind(this,value)}></span>
+    return <span className="alternative" key={`${inputObject.object}${key}`} children={alternative} onClick={this.changeInputValue.bind(this,value)}></span>
   }
 
   createEitherOrAlternatives(timeObject){
     let returnObjects=[];
     let temporalStructure= null;
     timeObject.phraseStructure.forEach((part,index)=>{
-      if(part.name === timeObject.part){
+      if(part.name === timeObject.object[0]){
         temporalStructure = [...timeObject.phraseStructure];
         temporalStructure[index] = {...part};
         temporalStructure[index].name = temporalStructure[index].name + "X";
         returnObjects.push(this.deletePhraseParts({
           action: "delete",
-          phrasePart: timeObject.part,
+          object: timeObject.object,
           phraseStructure:temporalStructure
         }))
       }
     });
-    console.log(returnObjects);
     return returnObjects;
   }
+  switchParts(timeObject){
+    timeObject.object.forEach((part,index)=>{
+      if(part.correctPosition){
+        let temporal = {...timeObject.object[part.correctPosition]};
+        timeObject.object[part.correctPosition] = {...part};
+        delete timeObject.object[part.correctPosition].correctPosition;
+        timeObject.object[part.correctPosition].highlight = true;
+        timeObject.object[index] = temporal;
+        delete timeObject.object[index].correctPosition;
+        timeObject.object[index].highlight = true;
+      }
+    });
+    let value="";
+    let children = [];
+    timeObject.object.forEach((part)=>{
+      if(children.length ===0 || part.name ==="point"){
+        //do nothing
+      }else{
+        children.push(" ");
+        value += " ";
+      };
+      if(part.highlight === true){
+        children.push(<span className="highlight" key={part.phrase}>{part.phrase}</span>);
+      }else{
+        children.push(part.phrase)
+      }
+      value+=part.phrase;
+    });
+    return <span className="alternative" key={`${value}`} children={children} onClick={this.changeInputValue.bind(this,value)}></span>
+  }
 
-  handleChange(e){
-    if(e.target.value.match(/.+\..+$/)){
+  evaluatePhrase(input){
+    if(input.match(/.+\..+$/)){
       return null;
     }
-    this.setState({input:e.target.value});
-    escrito.input = e.target.value;
-    let timeObject = escrito.analyzePhrase(e.target.value);
+    let timeObject = escrito.analyzePhrase(input);
     //validation
+    console.log(timeObject)
     if(timeObject.action === "show"){
-      this.props.response({
-        feedback:timeObject.feedback
-      });
+      console.log("show");
+      this.props.response({feedback:timeObject.feedback});
+      this.setState({inputWithFeedback : null})
     }else if(timeObject.action === "delete"){
+      console.log("delete");
+      this.props.response({feedback:timeObject.feedback});
       this.setState({inputWithFeedback : this.deletePhraseParts(timeObject)})
     }else if(timeObject.action === "alternatives"){
+      console.log("alternatives");
+      this.props.response({feedback:timeObject.feedback});
       this.setState({inputWithFeedback : this.createEitherOrAlternatives(timeObject)});
+    }else if(timeObject.action === "switch"){
+      console.log("switch");
+      this.props.response({feedback:timeObject.feedback});
+      this.setState({inputWithFeedback : this.switchParts(timeObject)});
     }else{
+      this.props.response({feedback:null});
       this.setState({inputWithFeedback : null});
-      
     }
     return null;
     if(timeObject.results){//if the timeObject has a results object
@@ -242,7 +290,7 @@ class Escrito extends Component{
         }else{
           correctWriting = es.phraseFinder(timeObject.results.hours, timeObject.results.minutes, timeObject.results.mode,timeObject.results.period,timeObject.results.type)[0].phrase;
         }
-        if(correctWriting===e.target.value){
+        if(correctWriting===input){
           this.setState({inputWithFeedback:escrito.input});
           this.props.response({
             hours:timeObject.results.hours,
@@ -268,13 +316,17 @@ class Escrito extends Component{
       this.props.response({feedback:timeObject.feedback})
     }
   }
+  handleChange(e){
+    escrito.input = e.target.value;
+    this.setState({input:e.target.value});
+  }
 
   render(){
       return (<div className="escritoContainer">
         <div className={`escrito${(this.props.answer === true)?'':' show'}`} >{this.write(this.state.hours, this.state.minutes)}</div>
         <span className={`escritoSpan${(this.props.answer === true)?' show':''}`}>
           <div className="escritoInteractionShow" >{this.write(this.state.hours, this.state.minutes)}</div>
-          <input id="escritoInteraction" className="escritoInteraction" placeholder="Escribe la hora aquí. Termina con un punto." value={escrito.input} onChange={this.handleChange}></input>
+          <input id="escritoInteraction" className="escritoInteraction" placeholder="Escribe la hora aquí. Termina con un punto." value={(this.props.answer === true )?escrito.input:this.state.input} onChange={this.handleChange}></input>
         </span>
       </div>);
   }

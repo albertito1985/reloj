@@ -342,7 +342,7 @@ transform:rotate(calc(var(--rotate) * -1));
 .alternative{
   width:100%;
   height:auto;
-  background-color:red;
+  background-color:#F8CA00;
  
 }
 .alternative .delete{
@@ -350,6 +350,15 @@ transform:rotate(calc(var(--rotate) * -1));
   
 }
 
+.escritoInteractionShow{
+  display:flex;
+  flex-direction: column;
+  gap:10px;
+}
+
+.highlight{
+  background-color:#E97F02;
+}
 
 /*
 ==========================>Generall<==========================

@@ -215,7 +215,7 @@ export let relojDigital = {
 }
 
 export let escrito ={
-  input: "",
+  input: "son las veinte cinco para las cuatro de la tarde mediodia.",
   hours: 0,
   minutes:0,
   analyzePhrase(phrase){
@@ -243,15 +243,6 @@ export let escrito ={
     if(words.length === 1){//if the use is writing the first word ... do nothing
       return responseObject;
     }
-
-
-
-    //****************************mover a else si la oración tiene punto.
-    // if(!(phrase.match(/.+\.$/))){// if the sentence do not ends with period.
-    //   responseObject.feedback.push("Termina la oración con un punto.");
-    // }
-
-
 
     //*************************dar feedback después del punto.
     // if(words.length >= 2){ // gives feedback about es o son at the beginning of the sentence.
@@ -310,13 +301,14 @@ export let escrito ={
     //   responseObject.feedback.push("La hora comienza con 'Es la' ó 'Son las' si no es mediodía, medianoche ó la frase (minutos) para (horas).");
     //   return responseObject;
     // }else{
-    if(true){
+    if(phrase.match(/.+\.$/)){
       let phraseParts =this.identifyPhraseParts(phrase);
       let structure = this.senseStructure(phraseParts);
       if(structure.find((object)=>object.name ==="undefined")){//checks for unidentified parts in the phrase
         return {
           action: "delete",
-          phrasePart: "undefined",
+          feedback:"Èstas partes están de más.",
+          object: ["undefined"],
           phraseStructure:structure
         }
       }
@@ -332,41 +324,23 @@ export let escrito ={
         }else{
           return {
             action:"alternatives",
-            phraseParts:phraseParts,
-            feedback:"Hay partes duplicadas",
-            part:duplicated,
+            feedback:"Éstas partes no pueden estar en la misma oración.",
+            object:[duplicated],
             phraseStructure:structure
           }
         }
       }
-
-
-
-
-
-
-
-
-
-
-
-
+      let structureValidation = this.IdentifyRightStructure(structure,phraseParts);
+      if(structureValidation !== "ok"){
+        return structureValidation;
+      }else {
+        console.log("phrase structure is correct.");
+      }
       
-    this.IdentifyRightStructure(structure,phraseParts);
-
+      console.log(phrase);
 
       return 0;
-      
-      
-      
-      
-      
-      
 
-
-
-      
-      return null;
       // console.log(responseObject);
       //**************************************** Test**********************************
       // if(phrase.match(/^[eé][szc]\sm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\.$/i)){
@@ -552,7 +526,14 @@ export let escrito ={
       }else{
         return responseObject
       }
+    }else{// if the sentence do not ends with period.
+     responseObject.feedback.push("Termina la oración con un punto.");//? necesary
+     return {action:"show", feedback:"Termina la oración con un punto."}
     }
+
+
+
+
     if(responseObject.results){
       if(Object.values(responseObject.results).some((value)=>typeof value==="object")){
         return responseObject
@@ -562,7 +543,169 @@ export let escrito ={
     return responseObject
   },
   IdentifyRightStructure(structure,phraseParts){
-    console.log(structure);
+    let correctStructure = [];
+    if(phraseParts.core === null){//chooses the correct structure according to the core.
+      //ex. son las dos.
+      correctStructure =[{name:"intro",mandatory:true}, {name:"number",mandatory:true},{name:"clarifier",mandatory:false},{name:"ending",mandatory:false}, {name:"point",mandatory:true}];
+    }else{
+
+      switch(phraseParts.core.type[0]){
+        case 0:
+          //ex. es mediodia/medianoche
+          correctStructure = [{name:"intro",mandatory:true}, {name:"core",mandatory:true},{name:"point",mandatory:true}];
+        break;
+        case 1:
+        case 2:
+          console.log("structure 1 & 2")
+          correctStructure = [{name:"intro",mandatory:true},{name:"number",mandatory:true},{name:"core",mandatory:true},{name:"number",mandatory:true},{name:"ending",mandatory:false},{name:"point",mandatory:true}]
+        break;
+        default:
+        break;
+      }
+    }
+    return compareStructure(structure,correctStructure);
+
+    function compareStructure(actualStructure,correctStructure){
+      let deleteParts = [];
+      let switchParts = false;
+      let missingParts = [];
+      let groups=0;
+      //finding grouping the parts that follow each other correctly.
+      for(let correct=0, start= false; correct < correctStructure.length; correct++){
+        for(let actual=0; actual<actualStructure.length;actual++){
+          if(!(actualStructure[actual].found)){
+            if(start===false){
+              if(actualStructure[actual].name.includes(correctStructure[correct].name)){
+                start=true;
+              }
+            }
+            if(start===true){
+              if(actualStructure[actual].name.includes(correctStructure[correct].name)){
+                actualStructure[actual].found = true;
+                actualStructure[actual].group=groups
+                correct++;
+              }else if(correctStructure[correct].mandatory===false){
+                correct++;
+                actual--;
+              }else{
+                start = false;
+                groups++;
+                correct=0;
+                break;
+              }
+            }
+          }
+        }
+      }
+      //finding the largest group
+      let currentLargestGroup={group:null,quantity:null};
+      for(let counter=0, temporalCounter=0; counter<=groups;counter++){
+        for(let actualCounter=0;actualCounter<actualStructure.length;actualCounter++){
+          let part=actualStructure[actualCounter];
+            if(!(typeof part.group)){
+              temporalCounter=0;
+            break;
+            }else if(part.group === counter){
+              temporalCounter++;
+              if(temporalCounter>currentLargestGroup.quantity){
+                currentLargestGroup.group=counter;
+                currentLargestGroup.quantity=temporalCounter;
+              }
+            }else{
+              temporalCounter=0;
+            }
+            
+        };
+      }
+      //deleting the smaller groups
+      actualStructure.forEach((actualPart)=>{
+        if(typeof actualPart.group !== undefined){
+          if(actualPart.group!==currentLargestGroup.group){
+            delete actualPart.group;
+            delete actualPart.found;
+          }
+        } 
+      });
+      //validating the largest group against the correct structure or deleting the group properties if the largest group has only one word
+      if(currentLargestGroup.quantity > 1){
+        correctStructure.forEach((part)=>{
+          if(!(part.found)){
+            actualStructure.forEach((actualPart)=>{
+              if(actualPart.group === currentLargestGroup.group){ 
+                if(!(part.found === true)){
+                  if(actualPart.name.includes(part.name)){
+                    actualPart.found = true;
+                    part.found = true;
+                  }
+                }
+              }
+            });
+          }
+        });
+      }else{
+        actualStructure.forEach((part)=>{
+          delete part.group
+        });
+      }
+      // finding correct structure parts or the rest of them.
+      correctStructure.forEach((part)=>{
+        actualStructure.forEach((actualPart)=>{
+          if(!(part.found === true)){
+            if(actualPart.name.includes(part.name)){
+              actualPart.found = true;
+              part.found = true;
+            }
+          }
+        });
+        if(!(part.found)){
+          part.found = false;
+        }
+      });
+      // checking for missing parts and deleting not mandatory-not found parts.
+      correctStructure.forEach((part,index)=>{
+        if(part.mandatory === true && part.found === false){
+          return {
+            action:"missing",
+            feedback: "Faltan partes",
+            object: missingParts,
+          }
+        }else if(part.mandatory === false && part.found === false){
+          correctStructure.splice(index,1);
+        }
+      });
+      // checking for extra parts
+      actualStructure.forEach((actualPart)=>{
+        if(!(actualPart.found)){
+          deleteParts.push(actualPart.name);
+        }
+      });
+      if(deleteParts.length>0){
+        return{ 
+          action:"delete",
+          object:deleteParts,
+          phraseStructure:structure
+        }
+      }
+      //checking for the correct structure order 
+      correctStructure.forEach((part,index)=>{
+        if(actualStructure[index].name.includes(part.name)){
+          actualStructure[index].validation = true;
+        }else{
+          let switchIndex = correctStructure.findIndex((innerPart)=>actualStructure[index].name.includes(innerPart.name))
+          actualStructure[index].correctPosition = switchIndex;
+          switchParts = true;
+        }
+      });
+      if(switchParts === true){
+        return {
+          action:"switch",
+          feedback: "Cambia el orden.",
+          object: actualStructure,
+        }
+      }
+        return "ok";
+    }
+    
     let order = ["intro","number","core","number","clarifier","ending","point"];
 
 
@@ -585,7 +728,6 @@ export let escrito ={
     */
     
   },
-  
   identifyPhraseParts(phrase){
     let returnObject = {
       wholePhrase:{
@@ -621,7 +763,7 @@ export let escrito ={
       },
     }
     //intro
-    let introIdentifier = /((?:\b[eé][szc]|\b[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))(?:\sl[aá][szc]?)?)\s/gid;
+    let introIdentifier = /((?:\b[eé][szc]|\b[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))(?:\sl[aá][szc]?\b)?)/gid;
     let intro = introIdentifier.exec(phrase);
     while(intro !== null) {
       returnObject.intro.phrase.push(intro[1]);
@@ -668,40 +810,6 @@ export let escrito ={
       {identifier :/\bp[aá]r[aá]\sl[aá][cszkq]?\b/gid,type:2, mode: 0},
       {identifier :/\bm[eé]n(?:ou|[oóuú])[szc]\b/gid, type:2, mode: 1}
     ];
-    // let coreIdentifiers = [
-    //   {identifier : /(\bm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\b)/gid, type:0, indices:{main:1,hours:1,minutes:1}},
-    //   {identifier :/(\bm[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\b)/gid, type:0, indices:{main:1,hours:1,minutes:1}},
-    //   {identifier :/((\b[A-zÀ-ú]*\b)(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s(\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?))/gid,type:1,indices:{main:1,hours:2,minutes:3}},
-    //   {identifier :/(((?:\b[A-zÀ-ú]*\b\s[iyí]?\s?)?\b[A-zÀ-ú]*\b)\sp[aá]r[aá]\sl[aá][cszkq]?\s(\b[A-zÀ-ú]*\b))/gid,type:2, mode: 0, indices:{main:1,hours:3,minutes:2}},
-    //   {identifier :/((\b[A-zÀ-ú]*\b)\sm[eé]n(?:ou|[oóuú])[szc]\s((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b))/gid, type:2, mode: 1, indices:{main:1,hours:2,minutes:3}}
-    // ];
-    // coreIdentifiers.forEach((identifier,index)=>{
-    //   let coreTemporal = identifier.identifier.exec(phrase);
-    //   while(coreTemporal !== null) {
-    //     returnObject.core.phrase.push(coreTemporal[identifier.indices.main]);
-    //     returnObject.core.position.push(coreTemporal.indices[identifier.indices.main]);
-    //     returnObject.core.type.push(identifier.type);
-    //     returnObject.core.mode.push((identifier.mode)?identifier.mode:0);
-    //     returnObject.core.hours.push({
-    //       phrase:coreTemporal[identifier.indices.hours],
-    //       position:coreTemporal.indices[identifier.indices.hours]
-    //     });
-    //     returnObject.core.minutes.push({
-    //       phrase:coreTemporal[identifier.indices.minutes],
-    //       position:coreTemporal.indices[identifier.indices.minutes]
-    //     });
-    //     coreTemporal = identifier.identifier.exec(phrase);
-    //   }
-    // })
-    // if(returnObject.core.phrase.length === 0){
-    //   returnObject.core = null;
-    // }else if(returnObject.core.phrase.length >=2){
-    //   returnObject.core.duplicated = true;
-    // }
-    // returnObject.point.position=[/\./d.exec(phrase).indices[0]];
-    // return returnObject;
-
-
     coreIdentifiers.forEach((identifier,index)=>{
       let coreTemporal = identifier.identifier.exec(phrase);
       while(coreTemporal !== null) {
@@ -719,18 +827,21 @@ export let escrito ={
     }
     //numbers
     let numbersTemporal = this.identifyNumbers(phrase);
-    let counter = 0;
-    numbersTemporal.phrase.forEach((phrase,index)=>{
-      returnObject[`number${counter}`] = {
-        phrase: [],
-        position:[],
-        value:[]
-      }
-      returnObject[`number${counter}`].phrase.push(phrase);
-      returnObject[`number${counter}`].position.push(numbersTemporal.position[index]);
-      returnObject[`number${counter}`].value.push(numbersTemporal.value[index]);
-      counter++
-    });
+    if(numbersTemporal !== null){
+      let counter = 0;
+      numbersTemporal.phrase.forEach((phrase,index)=>{
+        returnObject[`number${counter}`] = {
+          phrase: [],
+          position:[],
+          value:[]
+        }
+        returnObject[`number${counter}`].phrase.push(phrase);
+        returnObject[`number${counter}`].position.push(numbersTemporal.position[index]);
+        returnObject[`number${counter}`].value.push(numbersTemporal.value[index]);
+        counter++
+      });
+    }
+    
     //point
     let pointTemporal = /\./d.exec(phrase)
     returnObject.point.position=[pointTemporal.indices[0]];
