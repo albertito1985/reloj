@@ -215,7 +215,7 @@ export let relojDigital = {
 }
 
 export let escrito ={
-  input: "son las veinte cinco para las cuatro de la tarde mediodia.",
+  input: "son las uno para las doce.",
   hours: 0,
   minutes:0,
   analyzePhrase(phrase){
@@ -223,96 +223,262 @@ export let escrito ={
     let words = phrase.split(" ");
     let responseObject={
       feedback:[],
-      input:{
-        whole:undefined,
-        structure:undefined,
-        intro:undefined,
-        core:undefined,
-        clarifier:undefined,
-        ending:undefined
-      },
-      alternatives:{
-        intro:[],
-        core:[],
-        ending:[]
-      },
+      // input:{
+      //   whole:undefined,
+      //   structure:undefined,
+      //   intro:undefined,
+      //   core:undefined,
+      //   clarifier:undefined,
+      //   ending:undefined
+      // },
+      // alternatives:{
+      //   intro:[],
+      //   core:[],
+      //   ending:[]
+      // },
       results:{},
-      conflicts:[]
+      // conflicts:[]
     };
 
     if(words.length === 1){//if the use is writing the first word ... do nothing
       return responseObject;
     }
 
-    //*************************dar feedback después del punto.
-    // if(words.length >= 2){ // gives feedback about es o son at the beginning of the sentence.
-    //   if(words.length === 2){
-    //     if(!(phrase.match(/^(?:[EÉ][szc]|[SZC](?:ou|[oóuú])(?:ni|nj|[n|ñ]))/))){
-    //       responseObject.feedback.push("La hora siempre comienza con 'Es' ó 'Son'.");
-    //       responseObject.alternatives={
-    //         intro: ["Es", "Son"]
-    //       }
-    //     }
-    //     responseObject.input ={...responseObject.input,
-    //       intro:{
-    //         phrase:words[0],
-    //         index:[0,words[0].length]
-    //       }
-    //     }
-        
-    //   }
-
-
-
-
-
-      // else if (words.length >= 3){
-      //   if(!(phrase.match(/^[eé][szc]\sl[aá]/i) || phrase.match(/^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ])\sl[aá][szc]/i))){
-      //     responseObject.feedback.push("La hora comienza con 'Es la' ó 'Son las' si no es mediodía, medianoche ó la frase (minutos) para (horas).");
-      //     return responseObject;
-      //   }
-      // }
-    // }
-
-    
-
-    
-    
-    // if(words.length === 2 && phrase.match(/.+\.$/)){
-    //   responseObject.feedback.shift();
-      
-    //   if(words[0].match(/[eé][szc]$/i)){//es mediodía or es medianoche
-    //     if(words[1].match(/m[eé]d(?:ll|[iyí])(?:ou|[oóuú])d(?:ll|[iyí])[aá]\.$/i)){
-    //       responseObject.result = {
-    //         type : 0,
-    //         minutes:0,
-    //         hours:12
-    //       }
-    //       return responseObject;
-    //     }else if(words[1].match(/m[eé]d(?:ll|[iyí])[aá](?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\.$/i)){
-    //       responseObject.result = {
-    //         type : 0,
-    //         minutes:0,
-    //         hours:0
-    //       };
-    //       return responseObject;
-    //     }
-    //   }
-    //   responseObject.feedback.push("La hora comienza con 'Es la' ó 'Son las' si no es mediodía, medianoche ó la frase (minutos) para (horas).");
-    //   return responseObject;
-    // }else{
     if(phrase.match(/.+\.$/)){
+      //STRUCTURE
       let phraseParts =this.identifyPhraseParts(phrase);
-      let structure = this.senseStructure(phraseParts);
-      if(structure.find((object)=>object.name ==="undefined")){//checks for unidentified parts in the phrase
-        return {
-          action: "delete",
-          feedback:"Èstas partes están de más.",
-          object: ["undefined"],
-          phraseStructure:structure
+      console.log(phraseParts);
+      let structure = this.detectStructure(phraseParts);
+      if(structure.action){
+        return structure;
+      }else{
+        let duplicate = this.checkDuplicate(phraseParts,structure);
+        if(duplicate.action){
+          return duplicate;
         }
       }
-      let duplicated = null;
+      let structureValidation = this.identifyRightStructure(structure,phraseParts);
+      if(structureValidation !== "ok"){
+        return structureValidation;
+      }else {
+        console.log("phrase structure is correct.");
+        structure.forEach((part,index)=>{
+          phraseParts[part.name].structureNumber = index;
+        });
+
+      }
+      //CORRECTING THE INTRO
+      let introValidation = this.validateIntro(structure,phraseParts);
+        if(introValidation.action){
+          return introValidation;
+        }
+      //UNDERSTANDING THE PHRASE
+      responseObject.results = this.getTheTime(phraseParts);
+      if (responseObject.results.action){
+        let index = structure.findIndex((object)=>object.name === responseObject.results.object);
+        structure[index].highlight = true;
+        return {
+          ...responseObject.results,
+          structure:structure
+        };
+      }
+      if(phraseParts.ending !== null){
+        responseObject.results.period = phraseParts.ending.value[0];
+      }else{
+        responseObject.results.period = false;
+        let endingFeedback = this.getEndingFeedback(responseObject.results);
+        if(endingFeedback.feedback === true){
+          responseObject.feedback.push(endingFeedback.phrase);
+        }
+      }
+      let periodCongruence = this.periodHourCongruence(responseObject,structure,phraseParts.core.type[0]);
+      if (periodCongruence.action){  
+        return periodCongruence;
+      }
+      console.log("spelling and grammar check end");
+    }else{// if the sentence do not ends with period.
+     responseObject.feedback.push("Termina la oración con un punto.");//? necesary
+     return {action:"show", feedback:"Termina la oración con un punto."}
+    }
+    console.log(responseObject);
+    return responseObject
+  },
+  validatePeriod(results,structure){
+    if(results.period >0 && results.hours <=7){
+      if(results.period === 2){
+        let index = structure.findIndex((object)=>object.name === "ending");
+          structure[index].replace = ["de la mañana", "de la tarde"];  
+        return {
+          action: "replaceAndAlternatives",
+          feedback:"El periodo 'noche' se usa entre las 7 y las 12.",
+          structure:structure
+        }
+      }
+    }else if(results.period >0 && results.hours >7 && results.hours <13){
+      if(results.period === 1){
+        let index = structure.findIndex((object)=>object.name === "ending");
+          structure[index].replace = ["de la mañana", "de la noche"];
+        return {
+          action: "replaceAndAlternatives",
+          feedback:"El periodo 'tarde' se usa entre las 1 y las 7.",
+          structure:structure
+        }
+      }
+    }
+    return false;
+  },
+  getEndingFeedback(results){
+    if(results.minutes === 0 && (results.hours === 12 || results.hours === 0)){
+      return {feedback : false}
+    }else if(results.hours === 7){
+      return {feedback: true, phrase:"Puedes terminar la frase con; de la mañana, de la tarde ó de la noche, para que sea mas clara."};
+    }else if(results.hours>=1 && results.hours<7){
+      return {feedback: true, phrase:"Puedes terminar la frase con; de la mañana ó de la tarde para que sea mas clara."};
+    }else if(results.hours>=8 && results.hours<=12){
+      return {feedback: true, phrase:"Puedes terminar la frase con; de la mañana ó de la noche para que sea mas clara."};
+    }
+  },
+  getTheTime(phraseParts){
+    let responseObject = {};
+    let action = {
+      action : "highlight"
+    }
+    let validation;
+    if(phraseParts.core === null){
+      responseObject = {
+        minutes:0,
+        hours:phraseParts.number0.value[0]
+      }
+      validation = validateTime(responseObject);
+      if(validation==="hours"){
+        action.object = "number0";
+      }
+    }else if(phraseParts.core.type[0] === 0){
+      //es mediodía or es medianoche
+      if(phraseParts.core.phrase[0].match(/m[eé]d(?:ll|[iyí])(?:ou|[oóuú])d(?:ll|[iyí])[aá]$/i)){
+        responseObject ={
+          minutes:0,
+          hours:12
+        }
+      }else if(phraseParts.core.phrase[0].match(/m[eé]d(?:ll|[iyí])[aá](?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]$/i)){
+        responseObject = {
+          minutes:0,
+          hours:0
+        };
+      }
+      
+    }else if(phraseParts.core.type[0] === 1){
+      responseObject = {
+        minutes:phraseParts.number1.value[0],
+        hours:phraseParts.number0.value[0]
+      };
+      validation = validateTime(responseObject);
+      if(validation==="hours"){
+        action.object = "number0";
+      }else if(validation==="minutes"){
+        action.object = "number1";
+      }
+    }else if(phraseParts.core.type[0] === 2){
+      if(phraseParts.core.mode[0] === 0){
+        responseObject = {
+          minutes: phraseParts.number0.value[0],
+          hours:phraseParts.number1.value[0]
+        }
+        validation = validateTime(responseObject);
+        if(validation==="hours"){
+          action.object = "number1";
+        }else if(validation==="minutes"){
+          action.object = "number0";
+        }
+      }else{
+        responseObject = {
+          minutes: phraseParts.number1.value[0],
+          hours:phraseParts.number0.value[0]
+        }
+        validation = validateTime(responseObject);
+        if(validation==="hours"){
+          action.object = "number0";
+        }else if(validation==="minutes"){
+          action.object = "number1";
+        }
+      }
+    }
+    if(action.object){
+      return {
+        ...action,
+        feedback: (validation === "hours")? "Escribe las horas entre uno y doce.":"Escríbe los minutos entre uno y cincuenta y nueve."
+      }
+    }
+    return responseObject;
+    
+    function validateTime(time){
+      if(time.hours>12){
+        return "hours";
+      }else if(time.minutes> 59){
+        return "minutes";
+      }else{
+        return true
+      }
+    }
+  },
+  validateIntro(structure,phraseParts){
+    if(!(phraseParts.core) || !(phraseParts.core.type[0] === 0) ){
+      if(phraseParts.number0.value[0] === 1){
+        if(phraseParts.core.type[0] === 2 && phraseParts.core.mode[0] === 0){
+          if(!(phraseParts.intro.phrase[0].match(/^[eé][szc]$/i))){
+            let index = structure.findIndex((object)=>object.name === "intro");
+            structure[index].replace = "Es";       
+            return{
+              action:"replace",
+              feedback: "Ésta frase comienza con 'Es'.",
+              structure:structure
+            }
+          }
+        }else if(!(phraseParts.intro.phrase[0].match(/^[eé][szc]\sl[aá]$/i))){
+          let index = structure.findIndex((object)=>object.name === "intro");
+          structure[index].replace = "Es la";       
+          return{
+            action:"replace",
+            feedback: "Ésta frase comienza con 'Es la'.",
+            structure:structure
+          }
+        }
+      }else{
+        if(phraseParts.core.type[0] === 2 && phraseParts.core.mode[0] === 0){
+          if(!(phraseParts.intro.phrase[0].match(/^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ])$/i))){
+            let index = structure.findIndex((object)=>object.name === "intro");
+            structure[index].replace = "Son";       
+            return{
+              action:"replace",
+              feedback: "Ésta frase comienza con 'Son'.",
+              structure:structure
+            }
+          }
+        }else if(!(phraseParts.intro.phrase[0].match(/^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ])\sl[aá][szc]$/i))){
+          let index = structure.findIndex((object)=>object.name === "intro");
+          structure[index].replace = "Son las";       
+          return{
+            action:"replace",
+            feedback: "Ésta frase comienza con 'Son las'.",
+            structure:structure
+          }
+        }
+      }
+    }else{
+      if(!(phraseParts.intro.phrase[0].match(/^[eé][szc]$/i))){
+        let index = structure.findIndex((object)=>object.name === "intro");
+        structure[index].replace = "Es";       
+        return{
+          action:"replace",
+          feedback: "Ésta frase comienza con 'Es'.",
+          structure:structure
+        }
+      }
+    }
+    return false;
+  },
+  checkDuplicate(phraseParts,structure){
+    let duplicated = null;
       Object.keys(phraseParts).forEach((key)=>{//checks for duplicated phrase parts and return alternatives.
         if(phraseParts[key]!== null && phraseParts[key].duplicated === true){
           duplicated = key;
@@ -329,226 +495,16 @@ export let escrito ={
             phraseStructure:structure
           }
         }
-      }
-      let structureValidation = this.IdentifyRightStructure(structure,phraseParts);
-      if(structureValidation !== "ok"){
-        return structureValidation;
-      }else {
-        console.log("phrase structure is correct.");
-      }
-      
-      console.log(phrase);
-
-      return 0;
-
-      // console.log(responseObject);
-      //**************************************** Test**********************************
-      // if(phrase.match(/^[eé][szc]\sm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\.$/i)){
-      //   responseObject.result = {
-      //     type : 0,
-      //     minutes:0,
-      //     hours:12
-      //   }
-      //   return responseObject;
-      // }else if(phrase.match(/^[eé][szc]\sm[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\.$/i)){
-      //   responseObject.result = {
-      //     type : 0,
-      //     minutes:0,
-      //     hours:0
-      //   };
-      //   return responseObject;
-      // }
-
-      let mediodia = /m[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]/id.exec(phrase);
-      if(mediodia){
-        responseObject.results = {
-          type : 0,
-          minutes:0,
-          hours:12
-        }
-        // check if the core is unset
-        if(responseObject.input.core === undefined){
-          responseObject.input = {
-            core: {
-              phrase : mediodia[0],
-              position:mediodia.indices[0] //positions was called index before
-            }
-          }
-        }
-      }
-      
-      let medianoche = /m[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]/id.exec(phrase);
-      if(medianoche){
-        responseObject.results = {
-          type : 0,
-          minutes:0,
-          hours:0
-        };
-        responseObject.input = {
-          core: {
-            phrase : medianoche[0],
-            position:medianoche.indices[0] //positions was called index before
-          }
-        }
-        return responseObject;
-      }
-
-      
-       //**************************************** Test**********************************
-      responseObject.results = {};
-      
-      
-      
-      // let introduction = /^(?:[eé][szc]|^[szc](?:ou|[oóuú])(?:ni|nj|[n|ñ]))(?:\sl[aá][szc]?)?/gid.exec(phrase);
-      // if(introduction){
-      //   responseObject.input ={...responseObject.input,
-      //     intro:{
-      //       phrase:phrase.slice(0,introduction[0].length),
-      //       index:introduction.indices[0]
-      //     }
-      //   }
-      // }else{
-
-      // }
-
-
-
-
-      if(phrase.match(/.+\.$/)){// checks if the phrase has a period at the end and the period of time like de la mañana, de la tarde o de la noche. 
-        if(words.length === 1){
-            return {feedback : "Revisa la frase", source:phrase};
-        }
-        let ending= phrase.match(/(?:d[eé]\sl[aá]\s\b[A-zÀ-ú]*\b).?$/i);
-        if(ending){
-          responseObject.input ={...responseObject.input,
-            ending:{
-              phrase: phrase.slice(ending.index),
-              index:[ending.index,phrase.length]
-            }
-          }
-          let response = /d[eé]\sl[aá]\s(\b[A-zÀ-ú]*\b).?$/id.exec(responseObject.input.ending.phrase);
-          responseObject.results.period = this.identifyPeriod(response[1],response.indices[1],ending.index);
-        }else{
-          responseObject.input.ending = {phrase:""}
-          responseObject.results.period = false;
-          responseObject.feedback.push("Puedes terminar la frase con; de la mañana, de la tarde o de la noche, para que sea mas clara.");
-        }
       }else{
-        responseObject.input.ending = {phrase:""}
+        return false;
       }
-      let corePhrase = phrase.replace(responseObject.input.intro.phrase,"").replace(responseObject.input.ending.phrase,"").replace(".","").trim();
-      responseObject.input={...responseObject.input,
-        core: {
-          phrase: corePhrase,
-          index: new RegExp(corePhrase,"d").exec(phrase).indices[0]
-        }
-      }
-      if(responseObject.results.period !== undefined){
-        if(responseObject.input.core.phrase.match(/^\b[A-zÀ-ú]*\b$/i)){// checks if the phrase is short like "son las diez."
-          let hoursWritten =/^(\b[A-zÀ-ú]*\b)$/id.exec(responseObject.input.core.phrase);
-          let hours = this.identifyHours(hoursWritten[1],hoursWritten.indices[1],responseObject.input.core.index[0]);
-          let intro = this.checkIntro(responseObject.input.intro.phrase,2,hours,responseObject.input.intro.index);
-          responseObject.results = {...responseObject.results,
-            type:0,
-            mode:4,
-            minutes:0,
-            hours: hours,
-            intro:intro
-          }
-          if(typeof hours==="number"){
-            responseObject.feedback.push("Puedes agregar 'en punto' después de la hora.");
-          }
-        }
-        // else if(responseObject.input.core.phrase.match(/[eé]n\sp(?:ou|[oóuú])nt(?:ou|[oóuú])/i)){//en punto
-        //   let hoursWritten =/(\b[A-zÀ-ú]*\b)\s[eé]n\sp(?:ou|[oóuú])nt(?:ou|[oóuú])$/id.exec(responseObject.input.core.phrase);
-        //   if(hoursWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core.phrase};
-        //   let hours = this.identifyHours(hoursWritten[1],hoursWritten.indices[1],responseObject.input.core.index[0]);
-        //   let intro = this.checkIntro(responseObject.input.intro.phrase,2,hours,responseObject.input.intro.index);
-        //   responseObject.results = {...responseObject.results,
-        //     type:0,
-        //     mode:0,
-        //     minutes:0,
-        //     hours: hours,
-        //     intro:intro
-        //   }
-        // }
-        else if(responseObject.input.core.phrase.match(/(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s(?:\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?)/i)){//y
-          let timeWritten =/(\b[A-zÀ-ú]*\b)\s(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s?[iy]\s(\b[A-zÀ-ú]*\b(?:\s[iy]\s\b[A-zÀ-ú]*\b)?)$/id.exec(responseObject.input.core.phrase);
-          if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core.phrase};
-            let minutes = this.identifyMinutes(timeWritten[2],timeWritten.indices[2],responseObject.input.core.index[0]);
-            let hours = this.identifyHours(timeWritten[1],timeWritten.indices[1],responseObject.input.core.index[0]);
-            let intro = this.checkIntro(responseObject.input.intro.phrase,2,hours,responseObject.input.intro.index);
-            if(minutes>40){
-              responseObject.feedback.push("La frase '(horas) y (minutos)' se usa normalmente hasta los 40 minutos.");
-            }
-            responseObject.results = {...responseObject.results,
-              type:1,
-              mode:0,
-              minutes:minutes,
-              hours: hours,
-              intro:intro
-            }
-        }else if(responseObject.input.core.phrase.match(/p[aá]r[aá]\sl[aá][szc]?\s/i)){//para
-          let timeWritten = /((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b)\sp[aá]r[aá]\sl[aá][cszkq]?\s(\b[A-zÀ-ú]*\b$)/id.exec(responseObject.input.core.phrase);
-          if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core.phrase};
-            let minutes = this.identifyMinutes(timeWritten[1],timeWritten.indices[1],responseObject.input.core.index[0]);
-            let hours = this.identifyHours(timeWritten[2],timeWritten.indices[2],responseObject.input.core.index[0]);
-            let intro = this.checkIntro(responseObject.input.intro.phrase,1,minutes,responseObject.input.intro.index);
-            if(minutes>25){
-              responseObject.feedback.push("La frase '(minutos) para las (horas)' se usa cuando faltan menos de 25 minutos para cumplir la hora.")
-            }
-            responseObject.results = {...responseObject.results,
-              type:2,
-              mode:0,
-              minutes: minutes,
-              hours: hours,
-              intro:intro
-            }
-        }else if(responseObject.input.core.phrase.match(/m[eé]n(?:ou|[oóuú])[szc]/i)){//menos
-          let timeWritten = /(\b[A-zÀ-ú]*\b)\sm[eé]n(?:ou|[oóuú])[szc]\s((?:\b[A-zÀ-ú]*\b\s[iyí]\s)?\b[A-zÀ-ú]*\b$)/id.exec(responseObject.input.core.phrase);
-          if(timeWritten === null) return {feedback : "Revisa la frase.", source:responseObject.input.core.phrase};
-          let minutes = this.identifyMinutes(timeWritten[2],timeWritten.indices[2],responseObject.input.core.index[0]);
-          let hours = this.identifyHours(timeWritten[1],timeWritten.indices[1],responseObject.input.core.index[0]);
-          let intro = this.checkIntro(responseObject.input.intro.phrase,2,hours,responseObject.input.intro.index);
-          if(minutes>25){
-            responseObject.feedback.push("La frase '(horas) menos (minutos)' se usa cuando faltan menos de 25 minutos para cumplir la hora.")
-          }
-          responseObject.results = {...responseObject.results,
-            type:2,
-            mode:1,
-            minutes:minutes,
-            hours: hours,
-            intro:intro
-          }
-        }else{
-          return {feedback : "Revisa la frase.", source:responseObject.input.core.phrase};
-        }
-      }else{
-        return responseObject
-      }
-    }else{// if the sentence do not ends with period.
-     responseObject.feedback.push("Termina la oración con un punto.");//? necesary
-     return {action:"show", feedback:"Termina la oración con un punto."}
-    }
-
-
-
-
-    if(responseObject.results){
-      if(Object.values(responseObject.results).some((value)=>typeof value==="object")){
-        return responseObject
-      }
-    }
-    responseObject = this.periodHourCongruence(responseObject);
-    return responseObject
   },
-  IdentifyRightStructure(structure,phraseParts){
+  identifyRightStructure(structure,phraseParts){
     let correctStructure = [];
     if(phraseParts.core === null){//chooses the correct structure according to the core.
       //ex. son las dos.
       correctStructure =[{name:"intro",mandatory:true}, {name:"number",mandatory:true},{name:"clarifier",mandatory:false},{name:"ending",mandatory:false}, {name:"point",mandatory:true}];
     }else{
-
       switch(phraseParts.core.type[0]){
         case 0:
           //ex. es mediodia/medianoche
@@ -614,7 +570,6 @@ export let escrito ={
             }else{
               temporalCounter=0;
             }
-            
         };
       }
       //deleting the smaller groups
@@ -661,32 +616,41 @@ export let escrito ={
           part.found = false;
         }
       });
+      //validation
       // checking for missing parts and deleting not mandatory-not found parts.
+      let deleteOptional = [];
       correctStructure.forEach((part,index)=>{
         if(part.mandatory === true && part.found === false){
           return {
             action:"missing",
-            feedback: "Faltan partes",
+            feedback: "Faltan partes en la frase.",
             object: missingParts,
           }
         }else if(part.mandatory === false && part.found === false){
-          correctStructure.splice(index,1);
+          deleteOptional.push(index);
         }
       });
+      deleteOptional = deleteOptional.sort((a,b)=>b-a);
+      deleteOptional.forEach((index)=>{
+        correctStructure.splice(index,1);
+      });
+
       // checking for extra parts
       actualStructure.forEach((actualPart)=>{
         if(!(actualPart.found)){
           deleteParts.push(actualPart.name);
         }
       });
+
       if(deleteParts.length>0){
         return{ 
           action:"delete",
+          feedback:"En ésta frase específica éstas partes están de más.",
           object:deleteParts,
           phraseStructure:structure
         }
       }
-      //checking for the correct structure order 
+      //checking for the correct structure order
       correctStructure.forEach((part,index)=>{
         if(actualStructure[index].name.includes(part.name)){
           actualStructure[index].validation = true;
@@ -705,28 +669,6 @@ export let escrito ={
       }
         return "ok";
     }
-    
-    let order = ["intro","number","core","number","clarifier","ending","point"];
-
-
-    if(phraseParts.core === null){
-      let validStructure = [{mandatory:true,part:"intro"},{mandatory:true,part:"number"},{mandatory:false,part:"clarifier"},{mandatory:false,part:"ending"}];
-
-    }else{
-      if(phraseParts.core.type===0){
-
-      }
-    }
-    //nota mental
-    /*
-    inte core = [intro, number, optional clarifier, optional ending];
-
-    core type = 0, mode = 0;
-
-    
-    
-    */
-    
   },
   identifyPhraseParts(phrase){
     let returnObject = {
@@ -747,7 +689,8 @@ export let escrito ={
       ending:{
         phrase : [],
         position: [],
-        duplicated:false
+        duplicated:false,
+        value: []
       },
       core:{
         phrase: [],
@@ -790,11 +733,15 @@ export let escrito ={
     }
     
     //ending
-    let endingIdentifier = /(?:^|\s)((?:d[eé]\sl[aá]\s\b[A-zÀ-ú]*\b))/gid;
+    let endingIdentifier = /(?:^|\s)((?:d[eé]\sl[aá]\s(\b[A-zÀ-ú]*\b)))/gid;
     let ending = endingIdentifier.exec(phrase);
     while(ending !== null) {
-      returnObject.ending.phrase.push(ending[1]);
-      returnObject.ending.position.push(ending.indices[1]);
+      let period = this.identifyPeriod(ending[2]);
+      if(period !== -1){
+        returnObject.ending.phrase.push(ending[1]);
+        returnObject.ending.position.push(ending.indices[1]);
+        returnObject.ending.value.push(period);
+      }
       ending = endingIdentifier.exec(phrase);
     }
     if(returnObject.ending.phrase.length === 0){
@@ -806,7 +753,7 @@ export let escrito ={
     let coreIdentifiers = [
       {identifier : /\bm[eé]d(?:ll|[iyí])(?:ou|[oóuú])\s?d(?:ll|[iyí])[aá]\b/gid, type:0},
       {identifier :/\bm[eé]d(?:ll|[iyí])[aá]\s?(?:ni|nj|[n|ñ])(?:ou|[oóuú])(?:qu|[cszkq])h[eé]\b/gid, type:0},
-      {identifier :/(?<!tr[eé][iyí]nt[aá]|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá])\s[iy]\s/gid,type:1},
+      {identifier :/(?<!tr[eé][iyí]nt[aá]\s|(?:qu|[cszkq])(?:ou|[oóuú])[aá]r[eé]nt[aá]\s|(?:qu|[cszkq])[iyí]n(?:qu|[cszkq])(?:ou|[oóuú])[eé]nt[aá]\s)[iy]\b/gid,type:1},
       {identifier :/\bp[aá]r[aá]\sl[aá][cszkq]?\b/gid,type:2, mode: 0},
       {identifier :/\bm[eé]n(?:ou|[oóuú])[szc]\b/gid, type:2, mode: 1}
     ];
@@ -846,9 +793,10 @@ export let escrito ={
     let pointTemporal = /\./d.exec(phrase)
     returnObject.point.position=[pointTemporal.indices[0]];
     returnObject.point.phrase = pointTemporal[0];
+
     return returnObject;
   },
-  senseStructure(phraseParts){
+  detectStructure(phraseParts){
     let structure=[];
     let actualPosition=0;
     do{
@@ -866,7 +814,6 @@ export let escrito ={
               });
             }
           })
-          
         }
       });
       if(!(found)){
@@ -893,7 +840,21 @@ export let escrito ={
         actualPosition=structure[structure.length-1].position[1];
       }
     }while(structure[structure.length-1].position[1]!==phraseParts.wholePhrase.position[0][1]);
-    return structure;
+    if(structure.find((object)=>object.name ==="undefined")){//checks for unidentified parts in the phrase
+      return {
+        action: "delete",
+        feedback:"Èstas partes están de más o están mal escritas.",
+        object: ["undefined"],
+        phraseStructure:structure
+      }
+    }else if(structure.length === 0){
+      return {
+        action: "show",
+        feedback:"Revisa la frase."
+      }
+    }else{
+      return structure;
+    }
     
     function findGap(phraseParts,initialPosition){
       let lowerPosition=phraseParts.wholePhrase.position[0][1];
@@ -931,33 +892,52 @@ export let escrito ={
       
     }
   },
-  periodHourCongruence(timeObject){
-    let responseObject=timeObject;
-    if(!(timeObject.results.period===0 || timeObject.results.period=== false)){
-      responseObject.results.hours = (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12;
+  periodHourCongruence(responseObject,structure,phraseType){
+    let validation = this.validatePeriod(responseObject.results,structure);
+    console.log(validation);
+    if(validation.action){
+      console.log("validation");
+      return validation;
     }
-    if(timeObject.results.period === 0){
-      if((timeObject.results.hours>12 && timeObject.results.hours<24) || timeObject.results.hours===0){
-        responseObject.feedback.push("El periodo 'mañana' se usa entre la 1 y las 12 horas.");
-      }
-    }else if(timeObject.results.period === 1){
-      if(!(timeObject.results.hours<19 && timeObject.results.hours>12)){
-        responseObject.feedback.push("El periodo 'tarde' se usa entre las 13 y las 19 horas.");
-      }
-    }else if(timeObject.results.period === 2){
-      if(timeObject.results.hours<19 && timeObject.results.hours !== 0){
-        responseObject.feedback.push("El periodo 'noche' se usa entre las 19 y las 0 horas.");
-      }
+    if(!(responseObject.results.period===0 || responseObject.results.period=== false)){
+      responseObject.results.hours = (responseObject.results.hours +12 === 24)? 0: responseObject.results.hours +12;
     }
-    if(timeObject.results.type === 2){
-      responseObject.results.hours = timeObject.results.hours-1;
-      responseObject.results.minutes = 60-timeObject.results.minutes;
+    if(phraseType === 2){
+      responseObject.results.hours = (responseObject.results.hours === 0)? 23 : responseObject.results.hours-1;
+      responseObject.results.minutes = 60-responseObject.results.minutes;
     };
-    if(timeObject.results.period === false){
-      responseObject.results.hours =[responseObject.results.hours, (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12]
+    if(responseObject.results.period === false){
+      responseObject.results.hours =[responseObject.results.hours, (responseObject.results.hours +12 === 24)? 0: responseObject.results.hours +12]
     }
-    return responseObject;
+    return "ok";
   },
+  // periodHourCongruence(timeObject){
+  //   let responseObject=timeObject;
+  //   if(!(timeObject.results.period===0 || timeObject.results.period=== false)){
+  //     responseObject.results.hours = (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12;
+  //   }
+  //   if(timeObject.results.period === 0){
+  //     if((timeObject.results.hours>12 && timeObject.results.hours<24) || timeObject.results.hours===0){
+  //       responseObject.feedback.push("El periodo 'mañana' se usa entre la 1 y las 12 horas.");
+  //     }
+  //   }else if(timeObject.results.period === 1){
+  //     if(!(timeObject.results.hours<19 && timeObject.results.hours>12)){
+  //       responseObject.feedback.push("El periodo 'tarde' se usa entre las 13 y las 19 horas.");
+  //     }
+  //   }else if(timeObject.results.period === 2){
+  //     if(timeObject.results.hours<19 && timeObject.results.hours !== 0){
+  //       responseObject.feedback.push("El periodo 'noche' se usa entre las 19 y las 0 horas.");
+  //     }
+  //   }
+  //   if(timeObject.results.type === 2){
+  //     responseObject.results.hours = timeObject.results.hours-1;
+  //     responseObject.results.minutes = 60-timeObject.results.minutes;
+  //   };
+  //   if(timeObject.results.period === false){
+  //     responseObject.results.hours =[responseObject.results.hours, (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12]
+  //   }
+  //   return responseObject;
+  // },
   identifyNumbers(phrasePart){
     if(phrasePart===""){return null};
     let returnObject={
@@ -1140,15 +1120,16 @@ export let escrito ={
       return number
     };
   },
-  identifyPeriod(word,index,endingStartIndex){
+  identifyPeriod(word){
     // agregar periodos ambiguos ... sin de la mañana, tarde o noche.
     let periodIdentifiers = [/m[aá](?:ni|nj|[n|ñ])[aá](?:ni|nj|[n|ñ])[aá].?$/i,/t[aá]rd[eé].?$/i,/n(?:ou|[oóuú])(?:qu|[cszkq])h[eé].?$/i];
       let identifierNumber = periodIdentifiers.findIndex((identifier)=>word.match(identifier));
       if(identifierNumber===-1){
-        return {feedback: "El periodo está mal escrito.",
-          source:word,
-          index:[index[0]+endingStartIndex,index[1]+endingStartIndex]
-        }
+        return -1;
+        // return {
+        //   action: "highlight",
+        //   feedback: "Ésta parte está mal escrita."
+        // }
       }else{
         return identifierNumber
       };
