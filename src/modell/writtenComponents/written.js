@@ -67,9 +67,9 @@ export let es = {
             
             let returnArray = endings.map((ending,index)=>{
                 if(mode === 0){
-                    return {type:2,phrase:(hoursW === "uno")?`Son ${minutesW} para la una${ending}`:`Son ${minutesW} para las ${hoursW}${ending}`}
+                    return {type:2,phrase:`${(minutesW==="uno")? "Es uno": `Son ${minutesW}`} para ${(hoursW === "uno")?`la una${ending}`:`las ${hoursW}${ending}`}`}
                 }else{
-                    return {type:2,phrase:(hoursW === "uno")?`Son la una menos ${minutesW}${ending}`: `Son las ${hoursW} menos ${minutesW}${ending}`}
+                    return {type:2,phrase:(hoursW === "uno")?`Es la una menos ${minutesW}${ending}`: `Son las ${hoursW} menos ${minutesW}${ending}`}
                 }
             });
             return returnArray;

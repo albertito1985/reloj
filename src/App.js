@@ -2,15 +2,16 @@ import {Component} from 'react';
 import './App.css';
 
 import './controller/useful';//probar
-// import './controller/controller';
+import {general} from './controller/controller';
 import {Disco, Escrito, RelojDigital, RelojAnalogo} from './components/Reloj'
+import { toHaveDisplayValue } from '@testing-library/jest-dom/dist/matchers';
 
 class App extends Component {
   constructor(){
     super();
     this.state = {
-      hours: 0,
-      minutes: 0,
+      hours: 1,
+      minutes: 40,
       config:{
         analogInteraction: true,
         analogAnswer:false,
@@ -21,14 +22,17 @@ class App extends Component {
         writtenAnswer:true,
         writtenInteraction:false
       },
-      feedback:""
+      feedback:"",
+      answer:null
     }
     this.changeTime = this.changeTime.bind(this);
-    this.updateFeedback = this.updateFeedback.bind(this); 
+    this.updateFeedback = this.updateFeedback.bind(this);
+    this.updateResponse = this.updateResponse.bind(this);
   }
   
   componentDidMount(){
     //fetch info from URL
+    // this.setState(general.getRandomTime());
   }
 
   changeTime({hours,minutes}){
@@ -61,8 +65,26 @@ class App extends Component {
     }
     return parms;
 }
-
-
+  updateResponse(response){
+    console.log({response,state:this.state})
+    let stateTime = {
+      hours:this.state.hours,
+      minutes: this.state.minutes
+    }
+    if(general.compareTime(stateTime,response.results)){
+      //aquí me quedé
+      //mostrar la respuesta escrita correctamente si es que está mal escrita.
+      // dar feedback el tipo de frase.
+      let correctspelling = general.compareSpelling(response);
+      if( correctspelling === true){
+        this.setState({answer:response,feedback:[<span className="greetings" key={response.analysis.phrase}>{general.randomGreeting()}</span>, ...response.feedback]})
+      }else{
+        this.setState({answer:response,feedback:[<span className="greetings" key={response.analysis.phrase}>{`${general.randomGreeting()} observa en detalle la escritura correcta; ${correctspelling}`}</span>, ...response.feedback]})
+      }
+    }else{
+      this.setState({feedback:"La hora escrita NO es correcta."})
+    }
+  }
   render(){
     return (
       <div className="App">
@@ -74,7 +96,7 @@ class App extends Component {
           </div>
           <div className="texto">
             <p className="pregunta">¿Qué hora és?</p>
-            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} response={this.updateFeedback} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType}/>
+            <Escrito hours={this.state.hours} minutes={this.state.minutes} answer={this.state.config.writtenAnswer} feedback={this.updateFeedback} interaction={this.state.config.writtenInteraction} mode={this.state.config.writtenType} response={this.updateResponse}/>
             <div className="feedback">{this.state.feedback}</div>
           </div>
         </div>

@@ -359,6 +359,9 @@ transform:rotate(calc(var(--rotate) * -1));
 .highlight{
   background-color:#E97F02;
 }
+.greetings{
+  color:#E97F02;
+}
 
 /*
 ==========================>Generall<==========================

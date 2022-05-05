@@ -1,7 +1,51 @@
-import {language} from './swToEsLetterExceptions';
-import {es} from '../modell/writtenComponents/written'; 
-import { toBePartiallyChecked } from '@testing-library/jest-dom/dist/matchers';
-import {EndALoop} from './useful';
+import {es} from '../modell/writtenComponents/written';
+
+export let general = {
+  getRandomTime(){
+    let minutes = Math.floor(Math.random() * 60);
+    let rest = minutes%5;
+    minutes = (rest>=3)?minutes+(5-rest):minutes-rest;
+    return {
+      hours: Math.floor(Math.random() * 23),
+      minutes: minutes
+    }
+  },
+  compareTime(actual,input){
+    let evaluation = false;
+    if(Array.isArray(input.hours)){
+      input.hours.forEach((hour)=>{
+        if(hour===actual.hours){
+          evaluation = true;
+          input.hours = hour;
+        }
+      })
+    }else{
+      evaluation = true;
+    };
+    if(evaluation!== false){
+      if(actual.hours===input.hours && actual.minutes === input.minutes){
+        return true;
+      }else{
+        return false;
+      }
+    }else{
+      return false;
+    }
+  },
+  compareSpelling(response){
+    let correctSpelling = es.phraseFinder(response.results.hours,response.results.minutes,response.analysis.mode,response.results.period,response.analysis.type)
+    if(correctSpelling[0].phrase.localeCompare(response.analysis.phrase) === 0){
+      return true;
+    }else{
+      return correctSpelling[0].phrase;
+    }
+  },
+  randomGreeting(){
+    let greetings = ["Perfecto!","Muy bién!","Felicidades!", "Enhorabuena!","Bien hecho!","Buen trabajo!"];
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  }
+}
+
 export let reloj = {
     hours:0,
     minutes:0,
@@ -215,29 +259,16 @@ export let relojDigital = {
 }
 
 export let escrito ={
-  input: "son las uno para las doce.",
+  input: "es veinte para las diez.",
   hours: 0,
   minutes:0,
   analyzePhrase(phrase){
     phrase= phrase.replace(/\s+/g," ").trim();
     let words = phrase.split(" ");
+    let phraseParts;
     let responseObject={
       feedback:[],
-      // input:{
-      //   whole:undefined,
-      //   structure:undefined,
-      //   intro:undefined,
-      //   core:undefined,
-      //   clarifier:undefined,
-      //   ending:undefined
-      // },
-      // alternatives:{
-      //   intro:[],
-      //   core:[],
-      //   ending:[]
-      // },
-      results:{},
-      // conflicts:[]
+      results:{}
     };
 
     if(words.length === 1){//if the use is writing the first word ... do nothing
@@ -246,7 +277,7 @@ export let escrito ={
 
     if(phrase.match(/.+\.$/)){
       //STRUCTURE
-      let phraseParts =this.identifyPhraseParts(phrase);
+      phraseParts =this.identifyPhraseParts(phrase);
       console.log(phraseParts);
       let structure = this.detectStructure(phraseParts);
       if(structure.action){
@@ -291,17 +322,44 @@ export let escrito ={
           responseObject.feedback.push(endingFeedback.phrase);
         }
       }
+      //CORRECTING SINTACTIC ERRORS
       let periodCongruence = this.periodHourCongruence(responseObject,structure,phraseParts.core.type[0]);
       if (periodCongruence.action){  
         return periodCongruence;
+      }
+      let timeFraseTypeCongruence = this.timeFraseTypeCongruence(responseObject,structure,phraseParts.core.type[0]);
+      if (timeFraseTypeCongruence.action){  
+        return timeFraseTypeCongruence;
       }
       console.log("spelling and grammar check end");
     }else{// if the sentence do not ends with period.
      responseObject.feedback.push("Termina la oración con un punto.");//? necesary
      return {action:"show", feedback:"Termina la oración con un punto."}
     }
+    responseObject.analysis = {
+      phrase:phrase,
+      type:phraseParts.core.type[0],
+      mode:phraseParts.core.mode[0]
+    };
     console.log(responseObject);
     return responseObject
+  },
+  timeFraseTypeCongruence(response,structure,coreType){
+    if(response.results.minutes>=40 && coreType === 1){
+      return {
+        action: "show",
+        structure:structure,
+        feedback: "La frase '(horas) y (minutos)' se usa entre los minutos 1 y 35."
+      }
+    }else if(response.results.minutes<=35 && coreType === 2){
+      return {
+        action: "show",
+        structure:structure,
+        feedback: "La frase '(minutos) para las (horas)' ó  '(horas) menos (minutos)' se usa entre los minutos 40 y 59."
+      }
+    }else{
+      return false
+    }
   },
   validatePeriod(results,structure){
     if(results.period >0 && results.hours <=7){
@@ -894,7 +952,6 @@ export let escrito ={
   },
   periodHourCongruence(responseObject,structure,phraseType){
     let validation = this.validatePeriod(responseObject.results,structure);
-    console.log(validation);
     if(validation.action){
       console.log("validation");
       return validation;
@@ -911,33 +968,6 @@ export let escrito ={
     }
     return "ok";
   },
-  // periodHourCongruence(timeObject){
-  //   let responseObject=timeObject;
-  //   if(!(timeObject.results.period===0 || timeObject.results.period=== false)){
-  //     responseObject.results.hours = (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12;
-  //   }
-  //   if(timeObject.results.period === 0){
-  //     if((timeObject.results.hours>12 && timeObject.results.hours<24) || timeObject.results.hours===0){
-  //       responseObject.feedback.push("El periodo 'mañana' se usa entre la 1 y las 12 horas.");
-  //     }
-  //   }else if(timeObject.results.period === 1){
-  //     if(!(timeObject.results.hours<19 && timeObject.results.hours>12)){
-  //       responseObject.feedback.push("El periodo 'tarde' se usa entre las 13 y las 19 horas.");
-  //     }
-  //   }else if(timeObject.results.period === 2){
-  //     if(timeObject.results.hours<19 && timeObject.results.hours !== 0){
-  //       responseObject.feedback.push("El periodo 'noche' se usa entre las 19 y las 0 horas.");
-  //     }
-  //   }
-  //   if(timeObject.results.type === 2){
-  //     responseObject.results.hours = timeObject.results.hours-1;
-  //     responseObject.results.minutes = 60-timeObject.results.minutes;
-  //   };
-  //   if(timeObject.results.period === false){
-  //     responseObject.results.hours =[responseObject.results.hours, (timeObject.results.hours +12 === 24)? 0: timeObject.results.hours +12]
-  //   }
-  //   return responseObject;
-  // },
   identifyNumbers(phrasePart){
     if(phrasePart===""){return null};
     let returnObject={
